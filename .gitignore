@@ -1,0 +1,9 @@
+/target
+*.xlsx
+*.xls
+.DS_Store
+Thumbs.db
+*.pyc
+__pycache__/
+.vscode/
+.idea/

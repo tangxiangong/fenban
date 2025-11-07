@@ -1,0 +1,13 @@
+pub mod algorithm;
+pub mod io;
+pub mod model;
+pub mod stats;
+
+// 导出核心功能
+pub use algorithm::{divide_students, validate_constraints, ConstraintValidation, DivideConfig};
+pub use io::read_students_from_excel;
+pub use model::{Class, Gender, Student};
+pub use stats::{
+    calculate_detailed_statistics, calculate_statistics, DetailedStatistics, GenderBalance,
+    Statistics, SubjectStatistics,
+};
