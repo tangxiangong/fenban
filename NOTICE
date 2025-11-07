@@ -4,26 +4,6 @@ This software includes third-party code with the following attributions:
 
 ================================================================================
 
-crate: crates/xpaste
-Source: EcoPasteHub/EcoPaste (https://github.com/EcoPasteHub/EcoPaste)
-License: Apache-2.0
-Copyright: Copyright (c) EcoPasteHub
-
-The crate `crates/xpaste` is copied and modified from EcoPasteHub's
-project EcoPaste (https://github.com/EcoPasteHub/EcoPaste).
-
-Original License Information:
-- Apache License 2.0: https://github.com/EcoPasteHub/EcoPaste/blob/main/LICENSE
-
-Usage && Modifications:
-- Implement cross-application paste functionality
-- Modify API interfaces for FenBan application requirements
-  - `cocoa` && `objc` -> `objc2` && `objc2-foundation` for macOS
-  - `winapi` -> `windows` for Windows
-  - Remove Linux support and its corresponding deps
-
-================================================================================
-
 crate: crates/updater
 Source: tauri-apps/tauri-plugion-updater (https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/updater)
 License: MIT OR Apache-2.0
