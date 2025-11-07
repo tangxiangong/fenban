@@ -397,8 +397,8 @@ pub fn export_classes_to_excel_with_extras(
         for student in &class.students {
             let mut col = 0u16;
 
-            // 班级
-            sheet.write(row, col, class.id as f64)?;
+            // 班级（从 1 开始）
+            sheet.write(row, col, (class.id + 1) as f64)?;
             col += 1;
 
             // 学号（仅当有真实学号时）
@@ -470,7 +470,7 @@ pub fn export_classes_to_excel_with_extras(
     // 写入统计数据
     for (idx, class) in classes.iter().enumerate() {
         let row = (idx + 1) as u32;
-        stats_sheet.write(row, 0, class.id as f64)?;
+        stats_sheet.write(row, 0, (class.id + 1) as f64)?;
         stats_sheet.write(row, 1, class.students.len() as f64)?;
         stats_sheet.write(row, 2, class.male_count() as f64)?;
         stats_sheet.write(row, 3, class.female_count() as f64)?;
