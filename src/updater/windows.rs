@@ -6,7 +6,7 @@
 // Copyright (c) 2015 - Present - The Tauri Programme within The Commons Conservancy.
 // Licensed under MIT OR MIT/Apache-2.0
 
-use crate::{Error, Result, Updater};
+use crate::updater::{Error, Result, Updater};
 use std::{
     ffi::{OsStr, OsString},
     path::PathBuf,
@@ -69,11 +69,11 @@ impl Updater {
         if result <= 32 {
             *TEMP_FILE_KEEPER.lock().unwrap() = None;
             return match result {
-                2 => Err(crate::Error::InvalidUpdaterFormat), // ERROR_FILE_NOT_FOUND
-                5 => Err(crate::Error::InsufficientPrivileges), // ERROR_ACCESS_DENIED
-                32 => Err(crate::Error::FileInUse),           // ERROR_SHARING_VIOLATION
-                1223 => Err(crate::Error::UserCancelledElevation), // ERROR_CANCELLED (UAC cancelled)
-                _ => Err(crate::Error::InstallerExecutionFailed(result)),
+                2 => Err(Error::InvalidUpdaterFormat), // ERROR_FILE_NOT_FOUND
+                5 => Err(Error::InsufficientPrivileges), // ERROR_ACCESS_DENIED
+                32 => Err(Error::FileInUse),           // ERROR_SHARING_VIOLATION
+                1223 => Err(Error::UserCancelledElevation), // ERROR_CANCELLED (UAC cancelled)
+                _ => Err(Error::InstallerExecutionFailed(result)),
             };
         }
 
@@ -103,7 +103,7 @@ impl Updater {
                 if path.exists() && path.is_dir() {
                     Ok(path)
                 } else {
-                    Err(crate::Error::TempDirNotFound)
+                    Err(Error::TempDirNotFound)
                 }
             }
             Err(_) => {
@@ -155,7 +155,7 @@ impl Updater {
 
         // Verify the file was written correctly
         if !temp_path.exists() || std::fs::metadata(&temp_path)?.len() != bytes.len() as u64 {
-            return Err(crate::Error::InvalidUpdaterFormat);
+            return Err(Error::InvalidUpdaterFormat);
         }
 
         Ok((temp_path, Some(temp)))
