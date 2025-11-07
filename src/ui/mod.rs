@@ -1,5 +1,4 @@
 use crate::ui::views::{Home, UpdateWindow};
-#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use dioxus::desktop::use_muda_event_handler;
 use dioxus::prelude::*;
 
@@ -8,6 +7,11 @@ pub mod views;
 
 // icon assets
 pub static LOGO: Asset = asset!("assets/transparent_logo.png");
+pub static ICON_DOCUMENT: Asset = asset!("assets/icons/document.svg");
+pub static ICON_INFO: Asset = asset!("assets/icons/info.svg");
+pub static ICON_ERROR: Asset = asset!("assets/icons/error.svg");
+pub static ICON_SUCCESS: Asset = asset!("assets/icons/success.svg");
+pub static ICON_WARNING: Asset = asset!("assets/icons/warning.svg");
 
 // tailwindcss
 pub static TAILWINDCSS: Asset = asset!("assets/tailwind.css");
@@ -17,7 +21,6 @@ pub fn App() -> Element {
     let mut show_update_window = use_signal(|| false);
 
     // Handle menu events
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
     use_muda_event_handler(move |event| {
         if event.id().0 == "check_update" {
             show_update_window.set(true);

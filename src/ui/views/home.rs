@@ -7,6 +7,7 @@ use crate::core::{
     model::Class,
 };
 use crate::ui::components::*;
+use crate::ui::{ICON_ERROR, ICON_SUCCESS};
 use dioxus::prelude::*;
 use rfd::AsyncFileDialog;
 
@@ -278,17 +279,9 @@ pub fn Home() -> Element {
                 // 错误消息
                 if let Some(err) = error_message.read().as_ref() {
                     div { class: "alert alert-error mb-4 animate-fade-in shadow-lg",
-                        svg {
+                        img {
                             class: "stroke-current shrink-0 h-6 w-6",
-                            xmlns: "http://www.w3.org/2000/svg",
-                            fill: "none",
-                            view_box: "0 0 24 24",
-                            path {
-                                stroke_linecap: "round",
-                                stroke_linejoin: "round",
-                                stroke_width: "2",
-                                d: "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z",
-                            }
+                            src: ICON_ERROR,
                         }
                         span { "{err}" }
                         button {
@@ -302,17 +295,9 @@ pub fn Home() -> Element {
                 // 成功消息
                 if let Some(msg) = success_message.read().as_ref() {
                     div { class: "alert alert-success mb-4 animate-fade-in shadow-lg",
-                        svg {
+                        img {
                             class: "stroke-current shrink-0 h-6 w-6",
-                            xmlns: "http://www.w3.org/2000/svg",
-                            fill: "none",
-                            view_box: "0 0 24 24",
-                            path {
-                                stroke_linecap: "round",
-                                stroke_linejoin: "round",
-                                stroke_width: "2",
-                                d: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-                            }
+                            src: ICON_SUCCESS,
                         }
                         span { "{msg}" }
                         button {
