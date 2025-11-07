@@ -8,13 +8,6 @@ pub mod views;
 
 // icon assets
 pub static LOGO: Asset = asset!("assets/transparent_logo.png");
-pub static ERR_ICON: Asset = asset!("assets/icons/error.svg");
-pub static OK_ICON: Asset = asset!("assets/icons/ok.svg");
-pub static COPY_ICON: Asset = asset!("assets/icons/copy.svg");
-pub static ADD_ICON: Asset = asset!("assets/icons/add.svg");
-pub static CANCEL_ICON: Asset = asset!("assets/icons/cancel.svg");
-pub static DELETE_ICON: Asset = asset!("assets/icons/delete.svg");
-pub static DETAILS_ICON: Asset = asset!("assets/icons/details.svg");
 
 // tailwindcss
 pub static TAILWINDCSS: Asset = asset!("assets/tailwind.css");
