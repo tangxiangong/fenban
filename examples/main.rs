@@ -1,4 +1,5 @@
 use fenban::algorithm::{DivideConfig, divide_students, validate_constraints_with_params};
+use fenban::export_classes_to_excel;
 use fenban::model::{Gender, Student};
 use rand::{Rng, SeedableRng};
 use rand_distr::{Distribution, Normal};
@@ -33,33 +34,41 @@ fn main() {
         validation.max_gender_ratio_diff * 100.0
     );
 
-    // 显示每个班级的统计
-    println!("\n  班级详情:");
+    // // 显示每个班级的统计
+    // println!("\n  班级详情:");
     let all_subjects = vec![
         "语文", "数学", "外语", "物理", "化学", "生物", "政治", "历史", "地理",
     ];
 
-    for class in &classes {
-        println!(
-            "    班级{}: {} 人 (男 {} 女 {}), 总分 {:.1}, 男生比例 {:.0}%",
-            class.id,
-            class.students.len(),
-            class.male_count(),
-            class.female_count(),
-            class.avg_total_score(),
-            class.gender_ratio() * 100.0
-        );
+    // for class in &classes {
+    //     println!(
+    //         "    班级{}: {} 人 (男 {} 女 {}), 总分 {:.1}, 男生比例 {:.0}%",
+    //         class.id,
+    //         class.students.len(),
+    //         class.male_count(),
+    //         class.female_count(),
+    //         class.avg_total_score(),
+    //         class.gender_ratio() * 100.0
+    //     );
 
-        // 输出单科平均分
-        print!("      单科平均: ");
-        for (i, subject) in all_subjects.iter().enumerate() {
-            let avg = class.avg_subject_score(subject);
-            print!("{} {:.1}", subject, avg);
-            if i < all_subjects.len() - 1 {
-                print!(", ");
-            }
-        }
-        println!();
+    //     // 输出单科平均分
+    //     print!("      单科平均: ");
+    //     for (i, subject) in all_subjects.iter().enumerate() {
+    //         let avg = class.avg_subject_score(subject);
+    //         print!("{} {:.1}", subject, avg);
+    //         if i < all_subjects.len() - 1 {
+    //             print!(", ");
+    //         }
+    //     }
+    //     println!();
+    // }
+
+    // 导出结果到 Excel
+    println!("\n  导出结果到 Excel...");
+    let export_result = export_classes_to_excel(&classes, "分班结果.xlsx", &all_subjects);
+    match export_result {
+        Ok(_) => println!("    ✓ 成功导出到 分班结果.xlsx"),
+        Err(e) => println!("    ✗ 导出失败: {}", e),
     }
 }
 
