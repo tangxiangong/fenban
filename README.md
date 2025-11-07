@@ -147,7 +147,7 @@ export_classes_to_excel_with_extras(&classes, "结果.xlsx", &subjects, &extra_f
 - 第一行：表头
 - 性别列：值必须为 "男" 或 "女"
 - 科目数量不限，自动识别
-- 支持 .xlsx 格式
+- 支持 .xls 和 .xlsx 格式
 - 主科（语文、数学、外语）满分 150，副科满分 100
 
 ## 自定义列配置详解
@@ -326,7 +326,7 @@ let params = OptimizationParams {
     max_score_diff: 1.0,              // 平均分最大差值（分）
     max_class_size_diff: 5,           // 班级人数最大差值（人）
     max_gender_ratio_diff: 0.1,       // 性别比例最大差值（0.1 = 10%）
-    
+
     // 其他参数使用默认值
     ..Default::default()
 };
@@ -355,18 +355,18 @@ pub struct OptimizationParams {
     pub max_score_diff: f64,              // 平均分最大差值（默认：1.0）
     pub max_class_size_diff: usize,       // 班级人数最大差值（默认：5）
     pub max_gender_ratio_diff: f64,       // 性别比例最大差值（默认：0.1）
-    
+
     // === 惩罚权重 ===
     pub total_score_penalty_weight: f64,  // 总分惩罚权重（默认：10亿）
     pub subject_score_penalty_weight: f64,// 科目分惩罚权重（默认：10亿）
     pub gender_ratio_penalty_weight: f64, // 性别惩罚权重（默认：1000亿）
     pub penalty_power: i32,               // 惩罚幂次（默认：6）
-    
+
     // === 模拟退火参数 ===
     pub initial_temperature: f64,         // 初始温度（默认：10,000）
     pub cooling_rate: f64,                // 冷却速率（默认：0.99990）
     pub num_parallel_instances: Option<usize>, // 并行实例数（None=自动）
-    
+
     // === 早停参数 ===
     pub good_solution_threshold: f64,     // 早停阈值（默认：1.0）
     pub reheat_after_iterations: usize,   // 重启迭代数（默认：1,000）
@@ -530,7 +530,7 @@ pub fn validate_constraints(classes: &[Class]) -> ConstraintValidation
 
 ```rust
 pub fn validate_constraints_with_params(
-    classes: &[Class], 
+    classes: &[Class],
     params: &OptimizationParams
 ) -> ConstraintValidation
 ```

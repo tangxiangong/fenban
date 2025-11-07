@@ -1,0 +1,52 @@
+NOTICE
+
+This software includes third-party code with the following attributions:
+
+================================================================================
+
+crate: crates/xpaste
+Source: EcoPasteHub/EcoPaste (https://github.com/EcoPasteHub/EcoPaste)
+License: Apache-2.0
+Copyright: Copyright (c) EcoPasteHub
+
+The crate `crates/xpaste` is copied and modified from EcoPasteHub's
+project EcoPaste (https://github.com/EcoPasteHub/EcoPaste).
+
+Original License Information:
+- Apache License 2.0: https://github.com/EcoPasteHub/EcoPaste/blob/main/LICENSE
+
+Usage && Modifications:
+- Implement cross-application paste functionality
+- Modify API interfaces for FenBan application requirements
+  - `cocoa` && `objc` -> `objc2` && `objc2-foundation` for macOS
+  - `winapi` -> `windows` for Windows
+  - Remove Linux support and its corresponding deps
+
+================================================================================
+
+crate: crates/updater
+Source: tauri-apps/tauri-plugion-updater (https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/updater)
+License: MIT OR Apache-2.0
+Copyright: Copyright (c) 2015 - Present - The Tauri Programme within The Commons Conservancy
+
+The crate `crates/updater` is copied and modified from Tauri Programme's
+project tauri-plugin-updater (https://github.com/tauri-apps/plugins-workspace/tree/v2/plugins/updater).
+
+Original License Information:
+- MIT License: https://github.com/tauri-apps/plugins-workspace/blob/v2/plugins/updater/LICENSE_MIT
+- Apache License 2.0: https://github.com/tauri-apps/plugins-workspace/blob/v2/plugins/updater/LICENSE_APACHE-2.0
+
+Usage && Modifications:
+- Adapt for universal Rust crate instead of Tauri
+- Modify API interfaces for FenBan application requirements
+- Remove Tauri-specific dependencies and runtime integration
+- Use crate `octocrab` for GitHub API interaction
+- Remove Linux support and its corresponding deps
+
+================================================================================
+
+
+For complete license texts and additional attribution details, please see:
+- LICENSE-MIT (MIT License)
+- LICENSE-APACHE (Apache License 2.0)
+- README.md (Third-Party Code Attribution section)
