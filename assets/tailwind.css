@@ -370,6 +370,16 @@
           scale: 1;
           opacity: 1;
         }
+
+        :root:has(&) {
+          --page-has-backdrop: 1;
+          --page-overflow: hidden;
+          --page-scroll-bg: var(--page-scroll-bg-on);
+          --page-scroll-gutter: stable;
+          --page-scroll-transition: var(--page-scroll-transition-on);
+          animation: set-page-has-scroll forwards;
+          animation-timeline: scroll();
+        }
       }
 
       @starting-style {
@@ -403,7 +413,7 @@
         }
       }
 
-      --tab-p: 1rem;
+      --tab-p: 0.75rem;
       --tab-bg: var(--color-base-100);
       --tab-border-color: var(--color-base-300);
       --tab-radius-ss: 0;
@@ -412,6 +422,11 @@
       --tab-radius-ee: 0;
       --tab-order: 0;
       --tab-radius-min: calc(0.75rem - var(--border));
+      --tab-radius-limit: min(var(--radius-field), var(--tab-radius-min));
+      --tab-radius-grad: #0000 calc(69% - var(--border)),
+      var(--tab-border-color) calc(calc(69% - var(--border)) + 0.25px),
+      var(--tab-border-color) calc(calc(69% - var(--border)) + var(--border)),
+      var(--tab-bg) calc(calc(69% - var(--border)) + var(--border) + 0.25px);
       border-color: #0000;
       order: var(--tab-order);
       height: var(--tab-height);
@@ -445,7 +460,6 @@
       &:is(.tab-active, [aria-selected="true"], [aria-current="true"], [aria-current="page"]) {
         &+.tab-content {
           display: block;
-          height: calc(100% - var(--tab-height) + var(--border));
         }
       }
 
@@ -2962,130 +2976,27 @@ body {
 }
 
 @layer base {
-  :root:has(.modal-open, .modal[open], .modal:target, .modal-toggle:checked) {
-    overflow: hidden;
-    --page-has-backdrop: 1;
-  }
-
-  :root:has(.drawer:not([class*="drawer-open"]) > .drawer-toggle:checked) {
-    overflow: hidden;
-    --page-has-backdrop: 1;
-  }
-
-  :root:has(.sm\:drawer-open > .drawer-toggle:checked) {
-    @media (width < 40rem) {
-      overflow: hidden;
-    }
-
-    @media (width < 40rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.md\:drawer-open > .drawer-toggle:checked) {
-    @media (width < 48rem) {
-      overflow: hidden;
-    }
-
-    @media (width < 48rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.lg\:drawer-open > .drawer-toggle:checked) {
-    @media (width < 64rem) {
-      overflow: hidden;
-    }
-
-    @media (width < 64rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.xl\:drawer-open > .drawer-toggle:checked) {
-    @media (width < 80rem) {
-      overflow: hidden;
-    }
-
-    @media (width < 80rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.\32xl\:drawer-open > .drawer-toggle:checked) {
-    @media (width < 96rem) {
-      overflow: hidden;
-    }
-
-    @media (width < 96rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.max-sm\:drawer-open > .drawer-toggle:checked) {
-    @media (width >=40rem) {
-      overflow: hidden;
-    }
-
-    @media (width >=40rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.max-md\:drawer-open > .drawer-toggle:checked) {
-    @media (width >=48rem) {
-      overflow: hidden;
-    }
-
-    @media (width >=48rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.max-lg\:drawer-open > .drawer-toggle:checked) {
-    @media (width >=64rem) {
-      overflow: hidden;
-    }
-
-    @media (width >=64rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.max-xl\:drawer-open > .drawer-toggle:checked) {
-    @media (width >=80rem) {
-      overflow: hidden;
-    }
-
-    @media (width >=80rem) {
-      --page-has-backdrop: 1;
-    }
-  }
-
-  :root:has(.max-2xl\:drawer-open > .drawer-toggle:checked) {
-    @media (width >=96rem) {
-      overflow: hidden;
-    }
-
-    @media (width >=96rem) {
-      --page-has-backdrop: 1;
-    }
+  :root:not(span) {
+    overflow: var(--page-overflow);
   }
 }
 
 @layer base {
-  :root:has(.modal-open, .modal[open], .modal:target, .modal-toggle:checked, .drawer:not(.drawer-open) > .drawer-toggle:checked) {
-    background-image: linear-gradient(var(--root-bg), var(--root-bg));
-    background-color: var(--root-bg);
+  :root {
+    --page-scroll-bg-on: linear-gradient(var(--root-bg), var(--root-bg)) var(--root-bg);
 
     @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in srgb, var(--root-bg), oklch(0% 0 0) calc(var(--page-has-backdrop, 0) * 40%));
+      --page-scroll-bg-on: linear-gradient(var(--root-bg), var(--root-bg)) color-mix(in srgb, var(--root-bg), oklch(0% 0 0) calc(var(--page-has-backdrop, 0) * 40%));
     }
 
-    animation: set-page-has-scroll forwards;
-    animation-timeline: scroll();
-    scrollbar-gutter: stable;
-    scrollbar-gutter: if(style(--page-has-scroll: 1): stable; else: unset);
+    --page-scroll-transition-on: background-color 0.3s ease-out;
+    transition: var(--page-scroll-transition);
+    scrollbar-gutter: var(--page-scroll-gutter, unset);
+    scrollbar-gutter: if(style(--page-has-scroll: 1): var(--page-scroll-gutter, unset); else: unset);
+  }
+
+  :root:root {
+    background: var(--page-scroll-bg, var(--root-bg, var(--color-base-100)));
   }
 
   @keyframes set-page-has-scroll {

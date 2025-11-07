@@ -33,7 +33,6 @@ pub fn DivisionConfigView(
                             }
                         }
                     }
-
                 }
 
                 div { class: "alert alert-info",

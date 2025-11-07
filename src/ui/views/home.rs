@@ -252,7 +252,6 @@ pub fn Home() -> Element {
                     h1 { class: "text-3xl md:text-4xl font-bold text-primary mb-2",
                         "分班系统"
                     }
-
                 }
 
                 // 步骤指示器
