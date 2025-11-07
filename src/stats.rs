@@ -252,16 +252,20 @@ mod tests {
 
         classes[0].add_student(Student {
             name: "M1".to_string(),
+            student_id: None,
             gender: Gender::Male,
             scores: HashMap::new(),
             total_score: 600.0,
+            extra_fields: HashMap::new(),
         });
 
         classes[1].add_student(Student {
             name: "F1".to_string(),
+            student_id: None,
             gender: Gender::Female,
             scores: HashMap::new(),
             total_score: 600.0,
+            extra_fields: HashMap::new(),
         });
 
         let balance = calculate_gender_balance(&classes);
@@ -272,9 +276,11 @@ mod tests {
     fn create_student(name: &str, score: f64) -> Student {
         Student {
             name: name.to_string(),
+            student_id: None,
             gender: Gender::Male,
             scores: HashMap::new(),
             total_score: score,
+            extra_fields: HashMap::new(),
         }
     }
 }

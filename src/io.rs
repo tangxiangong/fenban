@@ -1,11 +1,200 @@
 use crate::model::{Class, Gender, Student};
-use calamine::{DataType, Reader, Xlsx, open_workbook};
+use calamine::{Data, DataType, Reader, Xlsx, open_workbook};
 use rayon::prelude::*;
 use rust_xlsxwriter::{Format, Workbook};
 use std::collections::HashMap;
 use std::error::Error;
 
-/// 从 Excel 读取学生数据
+/// Excel 列配置
+#[derive(Debug, Clone)]
+pub struct ExcelColumnConfig {
+    /// 学生姓名所在列（0-based）
+    pub name_column: usize,
+    /// 学号所在列（0-based），None 表示没有学号列
+    pub student_id_column: Option<usize>,
+    /// 性别所在列（0-based）
+    pub gender_column: usize,
+    /// 总成绩所在列（0-based），None 表示自动计算
+    pub total_score_column: Option<usize>,
+    /// 单科成绩列（列名 -> 列索引）
+    pub subject_columns: HashMap<String, usize>,
+    /// 需要保留的额外列（列名 -> 列索引）
+    pub extra_columns: HashMap<String, usize>,
+}
+
+impl ExcelColumnConfig {
+    /// 创建默认配置（兼容旧格式）
+    /// 格式：姓名 | 性别 | 科目1 | 科目2 | ...
+    pub fn default_legacy() -> Self {
+        Self {
+            name_column: 0,
+            student_id_column: None,
+            gender_column: 1,
+            total_score_column: None,
+            subject_columns: HashMap::new(), // 需要后续填充
+            extra_columns: HashMap::new(),
+        }
+    }
+
+    /// 从表头自动推断配置
+    pub fn from_header(header: &[Data]) -> Result<Self, Box<dyn Error>> {
+        let mut config = Self {
+            name_column: 0,
+            student_id_column: None,
+            gender_column: 1,
+            total_score_column: None,
+            subject_columns: HashMap::new(),
+            extra_columns: HashMap::new(),
+        };
+
+        // 从第3列开始是科目
+        for (idx, cell) in header.iter().enumerate().skip(2) {
+            if let Some(name) = cell.get_string() {
+                config.subject_columns.insert(name.to_string(), idx);
+            }
+        }
+
+        Ok(config)
+    }
+
+    /// 手动构建配置
+    pub fn builder() -> ExcelColumnConfigBuilder {
+        ExcelColumnConfigBuilder::default()
+    }
+}
+
+/// Excel 列配置构建器
+#[derive(Debug, Default)]
+pub struct ExcelColumnConfigBuilder {
+    name_column: Option<usize>,
+    student_id_column: Option<usize>,
+    gender_column: Option<usize>,
+    total_score_column: Option<usize>,
+    subject_columns: HashMap<String, usize>,
+    extra_columns: HashMap<String, usize>,
+}
+
+impl ExcelColumnConfigBuilder {
+    pub fn name_column(mut self, col: usize) -> Self {
+        self.name_column = Some(col);
+        self
+    }
+
+    pub fn student_id_column(mut self, col: usize) -> Self {
+        self.student_id_column = Some(col);
+        self
+    }
+
+    pub fn gender_column(mut self, col: usize) -> Self {
+        self.gender_column = Some(col);
+        self
+    }
+
+    pub fn total_score_column(mut self, col: usize) -> Self {
+        self.total_score_column = Some(col);
+        self
+    }
+
+    pub fn add_subject(mut self, name: String, col: usize) -> Self {
+        self.subject_columns.insert(name, col);
+        self
+    }
+
+    pub fn add_extra_column(mut self, name: String, col: usize) -> Self {
+        self.extra_columns.insert(name, col);
+        self
+    }
+
+    pub fn build(self) -> Result<ExcelColumnConfig, Box<dyn Error>> {
+        Ok(ExcelColumnConfig {
+            name_column: self.name_column.ok_or("姓名列未指定")?,
+            student_id_column: self.student_id_column,
+            gender_column: self.gender_column.ok_or("性别列未指定")?,
+            total_score_column: self.total_score_column,
+            subject_columns: self.subject_columns,
+            extra_columns: self.extra_columns,
+        })
+    }
+}
+
+/// 从 Excel 读取学生数据（使用列配置）
+pub fn read_students_from_excel_with_config(
+    file_path: &str,
+    config: &ExcelColumnConfig,
+) -> Result<Vec<Student>, Box<dyn Error>> {
+    let mut workbook: Xlsx<_> = open_workbook(file_path)?;
+    let sheet_name = workbook.sheet_names()[0].clone();
+    let range = workbook.worksheet_range(&sheet_name)?;
+
+    let rows: Vec<_> = range.rows().collect();
+    if rows.len() <= 1 {
+        return Err("Excel 文件没有数据行".into());
+    }
+
+    // 并行处理学生数据
+    let students: Vec<Student> = rows
+        .par_iter()
+        .enumerate()
+        .skip(1) // 跳过表头
+        .filter_map(|(row_idx, row)| {
+            // 读取姓名
+            let name = get_cell_string(row, config.name_column)?;
+            if name.is_empty() {
+                return None;
+            }
+
+            // 读取学号（如果没有学号列，使用行号）
+            let student_id = if let Some(col) = config.student_id_column {
+                get_cell_string(row, col)
+            } else {
+                Some(format!("R{}", row_idx + 1))
+            };
+
+            // 读取性别
+            let gender_str = get_cell_string(row, config.gender_column)?;
+            let gender = gender_str.parse::<Gender>().ok()?;
+
+            // 读取科目成绩
+            let mut scores = HashMap::with_capacity(config.subject_columns.len());
+            for (subject, &col_idx) in &config.subject_columns {
+                let score = get_cell_score(row, col_idx);
+                scores.insert(subject.clone(), score);
+            }
+
+            // 读取或计算总分
+            let total_score = if let Some(col) = config.total_score_column {
+                get_cell_score(row, col)
+            } else {
+                scores.values().sum()
+            };
+
+            // 读取额外字段
+            let mut extra_fields = HashMap::with_capacity(config.extra_columns.len());
+            for (field_name, &col_idx) in &config.extra_columns {
+                if let Some(value) = get_cell_string(row, col_idx) {
+                    extra_fields.insert(field_name.clone(), value);
+                }
+            }
+
+            Some(Student {
+                name,
+                student_id,
+                gender,
+                scores,
+                total_score,
+                extra_fields,
+            })
+        })
+        .collect();
+
+    if students.is_empty() {
+        return Err("未读取到任何学生数据".into());
+    }
+
+    Ok(students)
+}
+
+/// 从 Excel 读取学生数据（保持向后兼容）
 pub fn read_students_from_excel(
     file_path: &str,
 ) -> Result<(Vec<Student>, Vec<String>), Box<dyn Error>> {
@@ -32,8 +221,9 @@ pub fn read_students_from_excel(
     // 并行处理学生数据
     let students: Vec<Student> = rows
         .par_iter()
+        .enumerate()
         .skip(1)
-        .filter_map(|row| {
+        .filter_map(|(row_idx, row)| {
             if row.len() < 2 {
                 return None;
             }
@@ -61,9 +251,11 @@ pub fn read_students_from_excel(
 
             Some(Student {
                 name,
+                student_id: Some(format!("R{}", row_idx + 1)),
                 gender,
                 scores,
                 total_score: total,
+                extra_fields: HashMap::new(),
             })
         })
         .collect();
@@ -73,6 +265,24 @@ pub fn read_students_from_excel(
     }
 
     Ok((students, subjects))
+}
+
+// 辅助函数：从单元格读取字符串
+fn get_cell_string(row: &[Data], col: usize) -> Option<String> {
+    if col < row.len() {
+        row[col].get_string().map(|s| s.to_string())
+    } else {
+        None
+    }
+}
+
+// 辅助函数：从单元格读取分数
+fn get_cell_score(row: &[Data], col: usize) -> f64 {
+    if col < row.len() {
+        parse_score(&row[col])
+    } else {
+        0.0
+    }
 }
 
 #[inline]
@@ -85,11 +295,12 @@ fn parse_score(cell: &calamine::Data) -> f64 {
     })
 }
 
-/// 导出分班结果到 Excel
-pub fn export_classes_to_excel(
+/// 导出分班结果到 Excel（带额外字段）
+pub fn export_classes_to_excel_with_extras(
     classes: &[Class],
     file_path: &str,
     subjects: &[&str],
+    extra_field_names: &[&str],
 ) -> Result<(), Box<dyn Error>> {
     let mut workbook = Workbook::new();
 
@@ -105,7 +316,8 @@ pub fn export_classes_to_excel(
     sheet.set_name("分班结果")?;
 
     // 写入表头
-    let mut headers = vec!["班级", "姓名", "性别"];
+    let mut headers = vec!["班级", "学号", "姓名", "性别"];
+    headers.extend(extra_field_names.iter().copied());
     headers.extend(subjects.iter().copied());
     headers.push("总分");
 
@@ -117,24 +329,52 @@ pub fn export_classes_to_excel(
     let mut row = 1u32;
     for class in classes {
         for student in &class.students {
-            sheet.write(row, 0, class.id as f64)?;
-            sheet.write_string(row, 1, &student.name)?;
+            let mut col = 0u16;
+
+            // 班级
+            sheet.write(row, col, class.id as f64)?;
+            col += 1;
+
+            // 学号
+            let student_id = student.student_id.as_deref().unwrap_or("");
+            sheet.write_string(row, col, student_id)?;
+            col += 1;
+
+            // 姓名
+            sheet.write_string(row, col, &student.name)?;
+            col += 1;
+
+            // 性别
             sheet.write_string(
                 row,
-                2,
+                col,
                 if student.gender == Gender::Male {
                     "男"
                 } else {
                     "女"
                 },
             )?;
+            col += 1;
 
-            let mut col = 3u16;
+            // 额外字段
+            for field_name in extra_field_names {
+                let value = student
+                    .extra_fields
+                    .get(*field_name)
+                    .map(|s| s.as_str())
+                    .unwrap_or("");
+                sheet.write_string(row, col, value)?;
+                col += 1;
+            }
+
+            // 科目成绩
             for subject in subjects {
                 let score = student.scores.get(*subject).copied().unwrap_or(0.0);
                 sheet.write_with_format(row, col, score, &score_format)?;
                 col += 1;
             }
+
+            // 总分
             sheet.write_with_format(row, col, student.total_score, &score_format)?;
             row += 1;
         }
@@ -182,6 +422,15 @@ pub fn export_classes_to_excel(
 
     workbook.save(file_path)?;
     Ok(())
+}
+
+/// 导出分班结果到 Excel（简化版，保持向后兼容）
+pub fn export_classes_to_excel(
+    classes: &[Class],
+    file_path: &str,
+    subjects: &[&str],
+) -> Result<(), Box<dyn Error>> {
+    export_classes_to_excel_with_extras(classes, file_path, subjects, &[])
 }
 
 #[cfg(test)]

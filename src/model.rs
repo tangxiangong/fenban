@@ -25,9 +25,11 @@ impl FromStr for Gender {
 #[derive(Debug, Clone)]
 pub struct Student {
     pub name: String,
+    pub student_id: Option<String>,
     pub gender: Gender,
     pub scores: HashMap<String, f64>,
     pub total_score: f64,
+    pub extra_fields: HashMap<String, String>,
 }
 
 impl Student {
@@ -35,10 +37,22 @@ impl Student {
         let total_score = scores.values().sum();
         Self {
             name,
+            student_id: None,
             gender,
             scores,
             total_score,
+            extra_fields: HashMap::new(),
         }
+    }
+
+    pub fn with_student_id(mut self, student_id: Option<String>) -> Self {
+        self.student_id = student_id;
+        self
+    }
+
+    pub fn with_extra_fields(mut self, extra_fields: HashMap<String, String>) -> Self {
+        self.extra_fields = extra_fields;
+        self
     }
 }
 
@@ -178,16 +192,20 @@ mod tests {
 
         let student1 = Student {
             name: "Student1".to_string(),
+            student_id: None,
             gender: Gender::Male,
             scores: HashMap::new(),
             total_score: 600.0,
+            extra_fields: HashMap::new(),
         };
 
         let student2 = Student {
             name: "Student2".to_string(),
+            student_id: None,
             gender: Gender::Female,
             scores: HashMap::new(),
             total_score: 700.0,
+            extra_fields: HashMap::new(),
         };
 
         class.add_student(student1);
