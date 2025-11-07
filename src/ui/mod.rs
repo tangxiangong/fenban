@@ -1,8 +1,9 @@
-use crate::ui::views::UpdateWindow;
+use crate::ui::views::{Home, UpdateWindow};
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
+use dioxus::desktop::use_muda_event_handler;
 use dioxus::prelude::*;
 
 pub mod components;
-pub mod route;
 pub mod views;
 
 // icon assets
@@ -20,20 +21,31 @@ pub static TAILWINDCSS: Asset = asset!("assets/tailwind.css");
 
 #[component]
 pub fn App() -> Element {
-    let mut show_check_window = use_signal(|| false);
+    let mut show_update_window = use_signal(|| false);
+
+    // Handle menu events
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    use_muda_event_handler(move |event| {
+        if event.id().0 == "check_update" {
+            show_update_window.set(true);
+        }
+    });
 
     rsx! {
         document::Stylesheet { href: TAILWINDCSS }
-        Router::<route::Route> {}
-        if show_check_window() {
-            div { class: "modal modal-open",
-                div { class: "modal-box w-1/2",
-                    UpdateWindow { show_window: show_check_window }
-                }
+        Home {}
+
+        // Update modal
+        if show_update_window() {
+            div {
+                class: "modal modal-open",
+                onclick: move |_| show_update_window.set(false),
                 div {
-                    class: "modal-backdrop",
-                    onclick: move |_| show_check_window.set(false),
+                    class: "modal-box max-w-md",
+                    onclick: move |e| e.stop_propagation(),
+                    UpdateWindow { show_window: show_update_window }
                 }
+                div { class: "modal-backdrop" }
             }
         }
     }
