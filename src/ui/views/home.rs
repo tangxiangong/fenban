@@ -142,10 +142,14 @@ pub fn Home() -> Element {
         let mappings = column_mappings.read().clone();
         let classes = *num_classes.read();
 
+        // 立即切换到 Processing 状态
+        processing.set(true);
+        step.set(AppStep::Processing);
+        error_message.set(None);
+
         spawn(async move {
-            processing.set(true);
-            step.set(AppStep::Processing);
-            error_message.set(None);
+            // 给 UI 一点时间渲染
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
             // 构建列配置
             let mut config_builder = ExcelColumnConfig::builder();
@@ -273,11 +277,9 @@ pub fn Home() -> Element {
                 // 标题
                 div { class: "text-center mb-6",
                     h1 { class: "text-3xl md:text-4xl font-bold text-primary mb-2",
-                        "智能分班系统"
+                        "分班系统"
                     }
-                    p { class: "text-base-content/70 text-sm md:text-base",
-                        "基于多约束优化算法的均衡分班工具"
-                    }
+
                 }
 
                 // 步骤指示器
@@ -656,30 +658,31 @@ fn DivisionConfigView(
 ) -> Element {
     rsx! {
         div {
-            h2 { class: "text-2xl font-bold mb-4", "分班参数设置" }
+            h2 { class: "text-2xl font-bold mb-6", "分班参数设置" }
 
             div { class: "space-y-6 mb-8",
-                div { class: "form-control",
+                div { class: "form-control w-16",
                     label { class: "label",
                         span { class: "label-text font-medium", "班级数量" }
-                    }
-                    input {
-                        r#type: "number",
-                        class: "input input-bordered w-full max-w-xs",
-                        value: "{num_classes}",
-                        min: "2",
-                        max: "100",
-                        oninput: move |evt| {
-                            if let Ok(val) = evt.value().parse::<usize>() && (2..=100).contains(&val) {
-                                num_classes.set(val);
+                        input {
+                            r#type: "number",
+                            class: "input input-bordered",
+                            value: "{num_classes}",
+                            min: "2",
+                            max: "100",
+                            oninput: move |evt| {
+                                if let Ok(val) = evt.value().parse::<usize>() && (2..=100).contains(&val) {
+                                    num_classes.set(val);
+                                }
+                            },
+                        }
+                        label { class: "label",
+                            span { class: "label-text-alt text-base-content/60",
+                                "💡 根据学生总数合理设置"
                             }
-                        },
-                    }
-                    label { class: "label",
-                        span { class: "label-text-alt text-base-content/70",
-                            "💡 建议: 根据学生总数合理设置班级数量"
                         }
                     }
+
                 }
 
                 div { class: "alert alert-info",
@@ -725,10 +728,28 @@ fn DivisionConfigView(
 #[component]
 fn ProcessingView() -> Element {
     rsx! {
-        div { class: "text-center py-12",
-            div { class: "loading loading-spinner loading-lg text-primary mb-4" }
-            h2 { class: "text-2xl font-bold mb-2", "正在分班..." }
-            p { class: "text-base-content/70", "请稍候，这可能需要几秒钟" }
+        div { class: "text-center py-16",
+            // 主要加载动画
+            div { class: "flex justify-center mb-6",
+                div { class: "loading loading-spinner loading-lg text-primary" }
+            }
+
+            // 标题和提示
+            h2 { class: "text-3xl font-bold mb-3", "正在分班中..." }
+            p { class: "text-base-content/70 mb-6", "算法正在优化班级分配，请稍候" }
+
+            // 进度提示卡片
+            div { class: "flex flex-wrap justify-center gap-3 mt-8 max-w-md mx-auto",
+                div { class: "badge badge-lg badge-primary gap-2", "🎯 平衡分数" }
+                div { class: "badge badge-lg badge-secondary gap-2", "⚖️ 均衡性别" }
+                div { class: "badge badge-lg badge-accent gap-2", "📊 优化人数" }
+            }
+
+            // 处理步骤
+            div { class: "mt-8 text-sm text-base-content/60",
+                div { class: "loading loading-dots loading-sm inline-block mr-2" }
+                "使用模拟退火算法进行多目标优化"
+            }
         }
     }
 }
@@ -909,7 +930,13 @@ fn ResultsView(
                                             td { "{student.name}" }
                                             td {
 
-        
+
+
+
+
+
+
+
 
                                                 if student.gender == crate::core::model::Gender::Male {
                                                     "男"
@@ -948,24 +975,24 @@ fn ResultsView(
                                     {
                                         let current = *current_page.read();
                                         let mut pages_to_show = Vec::new();
-        
+
                                         pages_to_show.push(0);
-        
+
                                         let start = if current > 2 { current - 1 } else { 1 };
                                         let end = (current + 2).min(total_pages - 1);
-        
+
                                         for i in start..=end {
                                             if i > 0 && i < total_pages - 1 && !pages_to_show.contains(&i) {
                                                 pages_to_show.push(i);
                                             }
                                         }
-        
+
                                         if total_pages > 1 && !pages_to_show.contains(&(total_pages - 1)) {
                                             pages_to_show.push(total_pages - 1);
                                         }
-        
+
                                         pages_to_show.sort();
-        
+
                                         let mut elements = Vec::new();
                                         for (idx, &page) in pages_to_show.iter().enumerate() {
                                             if idx > 0 && page > pages_to_show[idx - 1] + 1 {
@@ -973,7 +1000,7 @@ fn ResultsView(
                                                     button { class: "join-item btn btn-sm btn-disabled", "..." }
                                                 });
                                             }
-        
+
                                             let is_current = page == current;
                                             elements.push(rsx! {
                                                 button {
@@ -983,7 +1010,7 @@ fn ResultsView(
                                                 }
                                             });
                                         }
-        
+
                                         rsx! {
                                             {elements.into_iter()}
                                         }
