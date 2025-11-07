@@ -3,8 +3,8 @@
   "specifiers": {
     "npm:@tailwindcss/cli@*": "4.1.16",
     "npm:@tailwindcss/cli@4.1.16": "4.1.16",
-    "npm:daisyui@^5.3.10": "5.3.10",
-    "npm:tailwindcss@^4.1.16": "4.1.16"
+    "npm:daisyui@^5.4.7": "5.4.7",
+    "npm:tailwindcss@^4.1.17": "4.1.17"
   },
   "npm": {
     "@jridgewell/gen-mapping@0.3.13": {
@@ -133,7 +133,7 @@
         "enhanced-resolve",
         "mri",
         "picocolors",
-        "tailwindcss"
+        "tailwindcss@4.1.16"
       ],
       "bin": true
     },
@@ -146,7 +146,7 @@
         "lightningcss",
         "magic-string",
         "source-map-js",
-        "tailwindcss"
+        "tailwindcss@4.1.16"
       ]
     },
     "@tailwindcss/oxide-android-arm64@4.1.16": {
@@ -231,8 +231,8 @@
         "fill-range"
       ]
     },
-    "daisyui@5.3.10": {
-      "integrity": "sha512-vmjyPmm0hvFhA95KB6uiGmWakziB2pBv6CUcs5Ka/3iMBMn9S+C3SZYx9G9l2JrgTZ1EFn61F/HrPcwaUm2kLQ=="
+    "daisyui@5.4.7": {
+      "integrity": "sha512-2wYO61vTPCXk7xEBgnzLZAYoE0xS5IRLu/GSq0vORpB+cTrtubdx69NnA0loc0exvCY1s2fYL4lGZtFHe2ohNQ=="
     },
     "detect-libc@1.0.3": {
       "integrity": "sha512-pGjwhsmsp4kL2RTz08wcOlGN83otlqHeD/Z5T8GXZB+/YcpQ/dgo+lbU8ZsGxV0HIvqqxo9l7mqYwyYMD9bKDg==",
@@ -378,6 +378,9 @@
     "tailwindcss@4.1.16": {
       "integrity": "sha512-pONL5awpaQX4LN5eiv7moSiSPd/DLDzKVRJz8Q9PgzmAdd1R4307GQS2ZpfiN7ZmekdQrfhZZiSE5jkLR4WNaA=="
     },
+    "tailwindcss@4.1.17": {
+      "integrity": "sha512-j9Ee2YjuQqYT9bbRTfTZht9W/ytp5H+jJpZKiYdP/bpnXARAuELt9ofP0lPnmHjbga7SNQIxdTAXCmtKVYjN+Q=="
+    },
     "tapable@2.3.0": {
       "integrity": "sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg=="
     },
@@ -391,8 +394,8 @@
   "workspace": {
     "dependencies": [
       "npm:@tailwindcss/cli@4.1.16",
-      "npm:daisyui@^5.3.10",
-      "npm:tailwindcss@^4.1.16"
+      "npm:daisyui@^5.4.7",
+      "npm:tailwindcss@^4.1.17"
     ]
   }
 }
