@@ -1,5 +1,5 @@
 use crate::model::{Class, Gender, Student};
-use rand::{Rng, thread_rng};
+use rand::{Rng, rng};
 use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -575,7 +575,7 @@ fn simulated_annealing(
     }
 
     let mut temperature = initial_temp;
-    let mut rng = thread_rng();
+    let mut rng = rng();
     let mut accept_count = 0;
     let mut iterations_since_improvement = 0;
 
@@ -597,11 +597,11 @@ fn simulated_annealing(
         }
 
         // 40% 概率同性别交换（优化分数），60% 概率跨性别交换（优化性别比例）
-        let same_gender_swap = rng.gen_range(0.0..1.0) < 0.4;
+        let same_gender_swap = rng.random::<f64>() < 0.4;
 
         let (idx1, idx2) = if same_gender_swap {
             // 同性别交换：随机选择同性别的两个学生
-            let use_male = rng.gen_bool(0.5);
+            let use_male = rng.random_bool(0.5);
             let indices = if use_male && male_indices.len() >= 2 {
                 &male_indices
             } else if !use_male && female_indices.len() >= 2 {
@@ -618,8 +618,8 @@ fn simulated_annealing(
                 continue;
             }
 
-            let i1 = indices[rng.gen_range(0..indices.len())];
-            let i2 = indices[rng.gen_range(0..indices.len())];
+            let i1 = indices[rng.random_range(0..indices.len())];
+            let i2 = indices[rng.random_range(0..indices.len())];
             (i1, i2)
         } else {
             // 跨性别交换：随机选择一男一女
@@ -627,8 +627,8 @@ fn simulated_annealing(
                 continue;
             }
 
-            let male_idx = male_indices[rng.gen_range(0..male_indices.len())];
-            let female_idx = female_indices[rng.gen_range(0..female_indices.len())];
+            let male_idx = male_indices[rng.random_range(0..male_indices.len())];
+            let female_idx = female_indices[rng.random_range(0..female_indices.len())];
             (male_idx, female_idx)
         };
 
@@ -642,7 +642,7 @@ fn simulated_annealing(
         let delta = new_cost - current_cost;
 
         // Metropolis 准则
-        if delta < 0.0 || rng.gen_range(0.0..1.0) < (-delta / temperature).exp() {
+        if delta < 0.0 || rng.random::<f64>() < (-delta / temperature).exp() {
             current_cost = new_cost;
             accept_count += 1;
 

@@ -1,5 +1,5 @@
 use crate::model::{Gender, Student};
-use calamine::{open_workbook, DataType, Reader, Xlsx};
+use calamine::{DataType, Reader, Xlsx, open_workbook};
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::error::Error;
