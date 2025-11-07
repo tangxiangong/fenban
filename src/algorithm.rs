@@ -1,8 +1,8 @@
 use crate::model::{Class, Gender, Student};
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 use rayon::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// 分班配置
 #[derive(Debug, Clone)]
@@ -114,15 +114,15 @@ impl Default for OptimizationParams {
             max_class_size_diff: 5,
             max_gender_ratio_diff: 0.1,
 
-            // 硬约束惩罚权重 - 极高权重确保优先满足
+            // 硬约束惩罚权重 - 性别比例权重极高以确保优先满足
             total_score_penalty_weight: 1_000_000_000.0,
             subject_score_penalty_weight: 1_000_000_000.0,
-            gender_ratio_penalty_weight: 1_000_000_000.0,
-            penalty_power: 4,
+            gender_ratio_penalty_weight: 100_000_000_000.0, // 极高的性别比例惩罚权重（100亿）
+            penalty_power: 6,                               // 提高幂次以加强惩罚
 
             // 软约束权重 - 在满足硬约束后进一步优化
             total_variance_weight: 10.0,
-            gender_variance_weight: 100.0,
+            gender_variance_weight: 5000.0, // 极高的性别方差权重
             subject_variance_weight: 50.0,
 
             // 模拟退火参数 - 平衡探索与收敛
@@ -132,7 +132,7 @@ impl Default for OptimizationParams {
             temperature_diversity_delta: 1_000.0,
 
             // 早停与重启参数
-            good_solution_threshold: 500.0,
+            good_solution_threshold: 1.0, // 设置极低，只有接近完美的解才会早停
             reheat_after_iterations: 1_000,
             reheat_temperature_factor: 0.5,
             reheat_min_accept_count: 100,
@@ -363,13 +363,9 @@ impl Solution {
         }
     }
 
-    /// 快速计算代价（只使用缓存数据）
+    /// 计算代价（使用缓存数据和参数）
     #[inline]
-    fn calculate_cost_fast(&self) -> f64 {
-        self.calculate_cost_with_params(&OptimizationParams::default())
-    }
-
-    fn calculate_cost_with_params(&self, params: &OptimizationParams) -> f64 {
+    fn calculate_cost(&self, params: &OptimizationParams) -> f64 {
         let num_classes = self.class_stats.len();
         if num_classes == 0 {
             return 0.0;
@@ -444,14 +440,12 @@ impl Solution {
 
         // 硬约束惩罚（权重极高，确保必须满足）
         if max_total_diff > params.max_score_diff {
-            cost += (max_total_diff - params.max_score_diff)
-                .powi(params.penalty_power)
+            cost += (max_total_diff - params.max_score_diff).powi(params.penalty_power)
                 * params.total_score_penalty_weight;
         }
 
         if max_gender_diff > params.max_gender_ratio_diff {
-            cost += (max_gender_diff - params.max_gender_ratio_diff)
-                .powi(params.penalty_power)
+            cost += (max_gender_diff - params.max_gender_ratio_diff).powi(params.penalty_power)
                 * params.gender_ratio_penalty_weight;
         }
 
@@ -478,6 +472,7 @@ impl Solution {
 }
 
 /// 创建初始解（使用改进的 LPT 算法）
+/// 生成初始解（改进的 LPT 算法，同时考虑总分和性别比例）
 fn create_initial_solution(
     students: &[Student],
     num_classes: usize,
@@ -494,19 +489,59 @@ fn create_initial_solution(
             .unwrap()
     });
 
-    // LPT：依次分配到总分最低的班级
+    // 改进的 LPT：同时考虑总分和性别比例
     for &student_idx in &indices {
-        let min_class = solution
+        let student = &students[student_idx];
+
+        // 找到最佳班级：综合考虑总分和性别比例
+        let best_class = solution
             .class_stats
             .iter()
             .enumerate()
-            .min_by(|(_, a), (_, b)| a.total_sum.partial_cmp(&b.total_sum).unwrap())
+            .min_by(|(_, a), (_, b)| {
+                // 计算分配到该班级后的总分
+                let score_a = a.total_sum;
+                let score_b = b.total_sum;
+
+                // 计算性别比例偏差
+                let male_ratio_a = if a.student_count == 0 {
+                    0.0
+                } else {
+                    let new_male = if student.gender == Gender::Male {
+                        a.male_count + 1
+                    } else {
+                        a.male_count
+                    };
+                    new_male as f64 / (a.student_count + 1) as f64
+                };
+
+                let male_ratio_b = if b.student_count == 0 {
+                    0.0
+                } else {
+                    let new_male = if student.gender == Gender::Male {
+                        b.male_count + 1
+                    } else {
+                        b.male_count
+                    };
+                    new_male as f64 / (b.student_count + 1) as f64
+                };
+
+                // 目标性别比例是 0.5（50%男生）
+                let gender_penalty_a = (male_ratio_a - 0.5).abs();
+                let gender_penalty_b = (male_ratio_b - 0.5).abs();
+
+                // 综合评分：总分 + 性别比例惩罚（权重较大）
+                let cost_a = score_a + gender_penalty_a * 10000.0;
+                let cost_b = score_b + gender_penalty_b * 10000.0;
+
+                cost_a.partial_cmp(&cost_b).unwrap()
+            })
             .map(|(idx, _)| idx)
             .unwrap_or(0);
 
         solution.assign_student(
             student_idx,
-            min_class,
+            best_class,
             &students[student_idx],
             subject_order,
         );
@@ -515,8 +550,9 @@ fn create_initial_solution(
     solution
 }
 
-/// 高性能模拟退火（带提前终止）
-fn simulated_annealing_optimized(
+/// 模拟退火算法
+#[allow(clippy::too_many_arguments)]
+fn simulated_annealing(
     initial: &Solution,
     students: &[Student],
     subject_order: &[String],
@@ -528,7 +564,7 @@ fn simulated_annealing_optimized(
 ) -> Solution {
     let mut current = initial.clone();
     let mut best = current.clone();
-    let mut current_cost = current.calculate_cost_with_params(params);
+    let mut current_cost = current.calculate_cost(params);
     let mut best_cost = current_cost;
 
     // 根据问题规模调整初始温度
@@ -560,26 +596,41 @@ fn simulated_annealing_optimized(
             break;
         }
 
-        // 随机选择同性别的两个学生交换
-        let use_male = rng.gen_bool(0.5);
-        let indices = if use_male && male_indices.len() >= 2 {
-            &male_indices
-        } else if !use_male && female_indices.len() >= 2 {
-            &female_indices
-        } else if male_indices.len() >= 2 {
-            &male_indices
-        } else if female_indices.len() >= 2 {
-            &female_indices
+        // 40% 概率同性别交换（优化分数），60% 概率跨性别交换（优化性别比例）
+        let same_gender_swap = rng.gen_range(0.0..1.0) < 0.4;
+
+        let (idx1, idx2) = if same_gender_swap {
+            // 同性别交换：随机选择同性别的两个学生
+            let use_male = rng.gen_bool(0.5);
+            let indices = if use_male && male_indices.len() >= 2 {
+                &male_indices
+            } else if !use_male && female_indices.len() >= 2 {
+                &female_indices
+            } else if male_indices.len() >= 2 {
+                &male_indices
+            } else if female_indices.len() >= 2 {
+                &female_indices
+            } else {
+                continue;
+            };
+
+            if indices.len() < 2 {
+                continue;
+            }
+
+            let i1 = indices[rng.gen_range(0..indices.len())];
+            let i2 = indices[rng.gen_range(0..indices.len())];
+            (i1, i2)
         } else {
-            continue;
+            // 跨性别交换：随机选择一男一女
+            if male_indices.is_empty() || female_indices.is_empty() {
+                continue;
+            }
+
+            let male_idx = male_indices[rng.gen_range(0..male_indices.len())];
+            let female_idx = female_indices[rng.gen_range(0..female_indices.len())];
+            (male_idx, female_idx)
         };
-
-        if indices.len() < 2 {
-            continue;
-        }
-
-        let idx1 = indices[rng.gen_range(0..indices.len())];
-        let idx2 = indices[rng.gen_range(0..indices.len())];
 
         if idx1 == idx2 || current.assignments[idx1] == current.assignments[idx2] {
             continue;
@@ -587,11 +638,11 @@ fn simulated_annealing_optimized(
 
         // 交换并计算新代价
         current.swap_students(idx1, idx2, students, subject_order);
-        let new_cost = current.calculate_cost_with_params(params);
+        let new_cost = current.calculate_cost(params);
         let delta = new_cost - current_cost;
 
         // Metropolis 准则
-        if delta < 0.0 || rng.gen::<f64>() < (-delta / temperature).exp() {
+        if delta < 0.0 || rng.gen_range(0.0..1.0) < (-delta / temperature).exp() {
             current_cost = new_cost;
             accept_count += 1;
 
@@ -628,8 +679,8 @@ fn simulated_annealing_optimized(
     best
 }
 
-/// 并行多实例优化
-fn parallel_optimization(
+/// 并行多实例搜索
+fn parallel_search(
     students: &[Student],
     num_classes: usize,
     subject_order: &[String],
@@ -650,7 +701,7 @@ fn parallel_optimization(
             let temp = params.initial_temperature
                 + (instance_id as f64 * params.temperature_diversity_delta);
             let cooling = params.cooling_rate;
-            simulated_annealing_optimized(
+            simulated_annealing(
                 &initial,
                 students,
                 subject_order,
@@ -667,8 +718,8 @@ fn parallel_optimization(
     solutions
         .into_iter()
         .min_by(|a, b| {
-            a.calculate_cost_with_params(params)
-                .partial_cmp(&b.calculate_cost_with_params(params))
+            a.calculate_cost(params)
+                .partial_cmp(&b.calculate_cost(params))
                 .unwrap()
         })
         .unwrap()
@@ -731,7 +782,7 @@ pub fn divide_students(students: &[Student], config: DivideConfig) -> Vec<Class>
         max_iterations.max(300000)
     };
 
-    let solution = parallel_optimization(
+    let solution = parallel_search(
         students,
         num_classes,
         &subject_order,
@@ -779,14 +830,17 @@ pub fn validate_constraints_with_params(
     let max_total_avg = total_avgs.iter().cloned().fold(f64::MIN, f64::max);
     let min_total_avg = total_avgs.iter().cloned().fold(f64::MAX, f64::min);
     let max_score_diff = max_total_avg - min_total_avg;
-    let score_constraints_met = max_score_diff <= params.max_score_diff;
+
+    // 使用小的 epsilon 处理浮点数精度问题
+    const EPSILON: f64 = 1e-9;
+    let score_constraints_met = max_score_diff <= params.max_score_diff + EPSILON;
 
     // 计算性别约束
     let gender_ratios: Vec<f64> = classes.iter().map(|c| c.gender_ratio()).collect();
     let max_gender_ratio = gender_ratios.iter().cloned().fold(f64::MIN, f64::max);
     let min_gender_ratio = gender_ratios.iter().cloned().fold(f64::MAX, f64::min);
     let max_gender_ratio_diff = max_gender_ratio - min_gender_ratio;
-    let gender_constraints_met = max_gender_ratio_diff <= params.max_gender_ratio_diff;
+    let gender_constraints_met = max_gender_ratio_diff <= params.max_gender_ratio_diff + EPSILON;
 
     // 计算各科约束
     let mut subject_max_diffs = Vec::new();
