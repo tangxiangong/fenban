@@ -11,6 +11,7 @@ windows-bundle = []
 
 [dependencies]
 calamine = "0.31"
+csv = "1.4"
 dioxus = { version = "0.7.1", features = ["desktop", "router"] }
 dirs = "6.0.0"
 futures-util = "0.3"

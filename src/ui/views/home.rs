@@ -3,8 +3,8 @@ use crate::core::{
         DivideConfig, OptimizationParams, divide_students, validate_constraints_with_params,
     },
     io::{
-        ExcelColumnConfig, export_classes_to_excel_with_extras,
-        read_students_from_excel_with_config,
+        ExcelColumnConfig, export_classes_to_csv_with_extras, export_classes_to_excel_with_extras,
+        read_students_from_csv_with_config, read_students_from_excel_with_config,
     },
     model::Class,
 };
@@ -32,7 +32,7 @@ pub fn Home() -> Element {
     let select_file = move |_| {
         spawn(async move {
             if let Some(file) = AsyncFileDialog::new()
-                .add_filter("Excel Files", &["xls", "xlsx"])
+                .add_filter("数据文件", &["xls", "xlsx", "csv"])
                 .pick_file()
                 .await
             {
@@ -163,34 +163,43 @@ pub fn Home() -> Element {
 
             // 执行分班
             match config_builder.build() {
-                Ok(config) => match read_students_from_excel_with_config(&path, &config) {
-                    Ok(students) => {
-                        let divide_config =
-                            DivideConfig::new(classes).with_optimization_params(opt_params.clone());
-                        let classes_result = divide_students(&students, divide_config.clone());
-                        let validation = validate_constraints_with_params(
-                            &classes_result,
-                            &divide_config.optimization_params,
-                        );
+                Ok(config) => {
+                    // 根据文件类型选择读取方式
+                    let students_result = if path.to_lowercase().ends_with(".csv") {
+                        read_students_from_csv_with_config(&path, &config)
+                    } else {
+                        read_students_from_excel_with_config(&path, &config)
+                    };
 
-                        let summary = format!(
-                            "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%",
-                            students.len(),
-                            classes,
-                            validation.max_score_diff,
-                            validation.max_gender_ratio_diff * 100.0,
-                        );
+                    match students_result {
+                        Ok(students) => {
+                            let divide_config = DivideConfig::new(classes)
+                                .with_optimization_params(opt_params.clone());
+                            let classes_result = divide_students(&students, divide_config.clone());
+                            let validation = validate_constraints_with_params(
+                                &classes_result,
+                                &divide_config.optimization_params,
+                            );
 
-                        result_summary.set(Some(summary));
-                        result_classes.set(classes_result);
-                        success_message.set(Some("分班成功！".to_string()));
-                        step.set(AppStep::Results);
+                            let summary = format!(
+                                "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%",
+                                students.len(),
+                                classes,
+                                validation.max_score_diff,
+                                validation.max_gender_ratio_diff * 100.0,
+                            );
+
+                            result_summary.set(Some(summary));
+                            result_classes.set(classes_result);
+                            success_message.set(Some("分班成功！".to_string()));
+                            step.set(AppStep::Results);
+                        }
+                        Err(e) => {
+                            error_message.set(Some(format!("读取学生数据失败: {}", e)));
+                            step.set(AppStep::ConfigureDivision);
+                        }
                     }
-                    Err(e) => {
-                        error_message.set(Some(format!("读取学生数据失败: {}", e)));
-                        step.set(AppStep::ConfigureDivision);
-                    }
-                },
+                }
                 Err(e) => {
                     error_message.set(Some(format!("配置错误: {}", e)));
                     step.set(AppStep::ConfigureDivision);
@@ -202,15 +211,21 @@ pub fn Home() -> Element {
     };
 
     // 导出结果
-    let export_results = move |_| {
+    let export_results = move |format: String| {
         let classes = result_classes.read().clone();
         let mappings = column_mappings.read().clone();
 
         spawn(async move {
+            // 根据格式设置默认文件名和过滤器
+            let (file_name, filter_name, filter_ext) = match format.as_str() {
+                "csv" => ("分班结果.csv", "CSV Files", vec!["csv"]),
+                _ => ("分班结果.xlsx", "Excel Files", vec!["xlsx"]),
+            };
+
             // 让用户选择保存位置
             if let Some(file) = AsyncFileDialog::new()
-                .set_file_name("分班结果.xlsx")
-                .add_filter("Excel Files", &["xlsx"])
+                .set_file_name(file_name)
+                .add_filter(filter_name, &filter_ext)
                 .save_file()
                 .await
             {
@@ -231,12 +246,24 @@ pub fn Home() -> Element {
                 let subjects_refs: Vec<&str> = subject_names.iter().map(|s| s.as_str()).collect();
                 let extras_refs: Vec<&str> = extra_field_names.iter().map(|s| s.as_str()).collect();
 
-                match export_classes_to_excel_with_extras(
-                    &classes,
-                    &output_path,
-                    &subjects_refs,
-                    &extras_refs,
-                ) {
+                // 根据文件扩展名选择导出格式
+                let export_result = if output_path.to_lowercase().ends_with(".csv") {
+                    export_classes_to_csv_with_extras(
+                        &classes,
+                        &output_path,
+                        &subjects_refs,
+                        &extras_refs,
+                    )
+                } else {
+                    export_classes_to_excel_with_extras(
+                        &classes,
+                        &output_path,
+                        &subjects_refs,
+                        &extras_refs,
+                    )
+                };
+
+                match export_result {
                     Ok(_) => {
                         success_message
                             .set(Some(format!("导出成功！\n文件已保存至: {}", output_path)));

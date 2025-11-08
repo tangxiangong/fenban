@@ -8,7 +8,7 @@ pub fn ResultsView(
     classes: Signal<Vec<Class>>,
     summary: Option<String>,
     column_mappings: Signal<Vec<ColumnMapping>>,
-    on_export: EventHandler<()>,
+    on_export: EventHandler<String>,
     on_restart: EventHandler<()>,
 ) -> Element {
     let mut current_page = use_signal(|| 0);
@@ -207,25 +207,25 @@ pub fn ResultsView(
                                         let current = *current_page.read();
                                         let mut pages_to_show = Vec::new();
 
-        
+
 
                                         pages_to_show.push(0);
-        
+
                                         let start = if current > 2 { current - 1 } else { 1 };
                                         let end = (current + 2).min(total_pages - 1);
-        
+
                                         for i in start..=end {
                                             if i > 0 && i < total_pages - 1 && !pages_to_show.contains(&i) {
                                                 pages_to_show.push(i);
                                             }
                                         }
-        
+
                                         if total_pages > 1 && !pages_to_show.contains(&(total_pages - 1)) {
                                             pages_to_show.push(total_pages - 1);
                                         }
-        
+
                                         pages_to_show.sort();
-        
+
                                         let mut elements = Vec::new();
                                         for (idx, &page) in pages_to_show.iter().enumerate() {
                                             if idx > 0 && page > pages_to_show[idx - 1] + 1 {
@@ -233,7 +233,7 @@ pub fn ResultsView(
                                                     button { class: "join-item btn btn-sm btn-disabled", "..." }
                                                 });
                                             }
-        
+
                                             let is_current = page == current;
                                             elements.push(rsx! {
                                                 button {
@@ -243,7 +243,7 @@ pub fn ResultsView(
                                                 }
                                             });
                                         }
-        
+
                                         rsx! {
                                             {elements.into_iter()}
                                         }
@@ -271,10 +271,30 @@ pub fn ResultsView(
 
             // 操作按钮
             div { class: "flex justify-center gap-4",
-                button {
-                    class: "btn btn-primary",
-                    onclick: move |_| on_export.call(()),
-                    "导出结果"
+                // 导出按钮（下拉选择）
+                div { class: "dropdown dropdown-top",
+                    div {
+                        tabindex: 0,
+                        role: "button",
+                        class: "btn btn-primary",
+                        "导出结果 ▼"
+                    }
+                    ul {
+                        tabindex: 0,
+                        class: "dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-lg mb-2",
+                        li {
+                            a {
+                                onclick: move |_| on_export.call("xlsx".to_string()),
+                                "Excel"
+                            }
+                        }
+                        li {
+                            a {
+                                onclick: move |_| on_export.call("csv".to_string()),
+                                "CSV"
+                            }
+                        }
+                    }
                 }
                 button {
                     class: "btn btn-outline",

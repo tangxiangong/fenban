@@ -1,9 +1,11 @@
 use super::model::{Class, Gender, Student};
 use calamine::{Data, DataType, Reader, Xls, Xlsx, open_workbook};
+use csv::{Reader as CsvReader, Writer as CsvWriter};
 use rayon::prelude::*;
 use rust_xlsxwriter::{Format, Workbook};
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs::File;
 
 /// Excel 列配置
 #[derive(Debug, Clone)]
@@ -499,6 +501,173 @@ pub fn export_classes_to_excel(
     subjects: &[&str],
 ) -> Result<(), Box<dyn Error>> {
     export_classes_to_excel_with_extras(classes, file_path, subjects, &[])
+}
+
+/// 从 CSV 读取学生数据（使用列配置）
+pub fn read_students_from_csv_with_config(
+    file_path: &str,
+    config: &ExcelColumnConfig,
+) -> Result<Vec<Student>, Box<dyn Error>> {
+    let file = File::open(file_path)?;
+    let mut rdr = CsvReader::from_reader(file);
+
+    // 读取表头（跳过）
+    let _headers = rdr.headers()?;
+
+    // 并行处理学生数据
+    let records: Vec<_> = rdr.records().collect::<Result<Vec<_>, _>>()?;
+
+    let students: Vec<Student> = records
+        .par_iter()
+        .enumerate()
+        .filter_map(|(row_idx, record)| {
+            // 读取姓名
+            let name = record.get(config.name_column)?.trim().to_string();
+            if name.is_empty() {
+                return None;
+            }
+
+            // 读取学号（如果没有学号列，使用行号）
+            let student_id = if let Some(col) = config.student_id_column {
+                record.get(col).map(|s| s.trim().to_string())
+            } else {
+                Some(format!("R{}", row_idx + 1))
+            };
+
+            // 读取性别
+            let gender_str = record.get(config.gender_column)?.trim();
+            let gender = gender_str.parse::<Gender>().ok()?;
+
+            // 读取科目成绩
+            let mut scores = HashMap::with_capacity(config.subject_columns.len());
+            for (subject, &col_idx) in &config.subject_columns {
+                let score = record
+                    .get(col_idx)
+                    .and_then(|s| s.trim().parse::<f64>().ok())
+                    .unwrap_or(0.0);
+                scores.insert(subject.clone(), score);
+            }
+
+            // 读取或计算总分
+            let total_score = if let Some(col) = config.total_score_column {
+                record
+                    .get(col)
+                    .and_then(|s| s.trim().parse::<f64>().ok())
+                    .unwrap_or(0.0)
+            } else {
+                scores.values().sum()
+            };
+
+            // 读取额外字段
+            let mut extra_fields = HashMap::with_capacity(config.extra_columns.len());
+            for (field_name, &col_idx) in &config.extra_columns {
+                if let Some(value) = record.get(col_idx) {
+                    extra_fields.insert(field_name.clone(), value.trim().to_string());
+                }
+            }
+
+            Some(Student {
+                name,
+                student_id,
+                gender,
+                scores,
+                total_score,
+                extra_fields,
+            })
+        })
+        .collect();
+
+    if students.is_empty() {
+        return Err("未读取到任何学生数据".into());
+    }
+
+    Ok(students)
+}
+
+/// 导出分班结果到 CSV（带额外字段）
+pub fn export_classes_to_csv_with_extras(
+    classes: &[Class],
+    file_path: &str,
+    subjects: &[&str],
+    extra_field_names: &[&str],
+) -> Result<(), Box<dyn Error>> {
+    let file = File::create(file_path)?;
+    let mut wtr = CsvWriter::from_writer(file);
+
+    // 检查是否有真实学号
+    let has_student_id = has_real_student_ids(classes);
+
+    // 写入表头
+    let mut headers = vec!["班级"];
+    if has_student_id {
+        headers.push("学号");
+    }
+    headers.push("姓名");
+    headers.push("性别");
+    headers.extend(extra_field_names.iter().copied());
+    headers.extend(subjects.iter().copied());
+    headers.push("总分");
+
+    wtr.write_record(&headers)?;
+
+    // 写入学生数据
+    for class in classes {
+        for student in &class.students {
+            let mut record = Vec::new();
+
+            // 班级（从 1 开始）
+            record.push((class.id + 1).to_string());
+
+            // 学号（仅当有真实学号时）
+            if has_student_id {
+                let student_id = student.student_id.as_deref().unwrap_or("");
+                record.push(student_id.to_string());
+            }
+
+            // 姓名
+            record.push(student.name.clone());
+
+            // 性别
+            record.push(if student.gender == Gender::Male {
+                "男".to_string()
+            } else {
+                "女".to_string()
+            });
+
+            // 额外字段
+            for field_name in extra_field_names {
+                let value = student
+                    .extra_fields
+                    .get(*field_name)
+                    .map(|s| s.as_str())
+                    .unwrap_or("");
+                record.push(value.to_string());
+            }
+
+            // 科目成绩
+            for subject in subjects {
+                let score = student.scores.get(*subject).copied().unwrap_or(0.0);
+                record.push(format!("{:.1}", score));
+            }
+
+            // 总分
+            record.push(format!("{:.1}", student.total_score));
+
+            wtr.write_record(&record)?;
+        }
+    }
+
+    wtr.flush()?;
+    Ok(())
+}
+
+/// 导出分班结果到 CSV（简化版）
+pub fn export_classes_to_csv(
+    classes: &[Class],
+    file_path: &str,
+    subjects: &[&str],
+) -> Result<(), Box<dyn Error>> {
+    export_classes_to_csv_with_extras(classes, file_path, subjects, &[])
 }
 
 #[cfg(test)]

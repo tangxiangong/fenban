@@ -11,8 +11,8 @@ pub fn SelectFileView(on_select: EventHandler<()>) -> Element {
                     src: ICON_DOCUMENT,
                 }
             }
-            h2 { class: "text-2xl font-bold mb-4", "选择 Excel 文件" }
-            p { class: "text-base-content/70 mb-6", "支持 .xls 和 .xlsx 格式" }
+            h2 { class: "text-2xl font-bold mb-4", "选择文件" }
+            p { class: "text-base-content/70 mb-6", "支持 .csv, .xls 和 .xlsx 格式" }
             button {
                 class: "btn btn-primary btn-lg",
                 onclick: move |_| on_select.call(()),
