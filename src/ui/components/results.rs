@@ -73,10 +73,6 @@ pub fn ResultsView(
 
     rsx! {
         div { class: "space-y-6",
-            div { class: "text-center",
-                h2 { class: "text-2xl font-bold", "分班完成！" }
-            }
-
             // 统计信息
             if let Some(summary_text) = summary {
                 div { class: "alert alert-info",
@@ -106,7 +102,6 @@ pub fn ResultsView(
                 "statistics" => rsx! {
                     // 班级统计表
                     div {
-                        h3 { class: "text-lg font-bold mb-3", "班级统计" }
                         div { class: "overflow-x-auto",
                             table { class: "table table-sm",
                                 thead {
@@ -144,7 +139,6 @@ pub fn ResultsView(
                 "students" => rsx! {
                     // 学生分班结果表
                     div {
-                        h3 { class: "text-lg font-bold mb-3", "学生分班结果" }
                         div { class: "overflow-x-auto",
                             table { class: "table table-zebra table-sm",
                                 thead {
@@ -206,9 +200,6 @@ pub fn ResultsView(
                                     {
                                         let current = *current_page.read();
                                         let mut pages_to_show = Vec::new();
-
-
-
                                         pages_to_show.push(0);
 
                                         let start = if current > 2 { current - 1 } else { 1 };

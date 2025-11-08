@@ -9,7 +9,7 @@ use crate::core::{
     model::Class,
 };
 use crate::ui::components::*;
-use crate::ui::{ICON_ERROR, ICON_SUCCESS};
+use crate::ui::{ICON_ERROR, ICON_SUCCESS, LOGO};
 use dioxus::prelude::*;
 use rfd::AsyncFileDialog;
 
@@ -281,8 +281,24 @@ pub fn Home() -> Element {
             div { class: "max-w-7xl mx-auto",
                 // 标题
                 div { class: "text-center mb-6",
-                    h1 { class: "text-3xl md:text-4xl font-bold text-primary mb-2",
-                        "分班系统"
+                    div { class: "flex items-center justify-center gap-3 mb-2",
+                        img {
+                            class: "w-12 h-12 md:w-16 md:h-16 cursor-pointer hover:opacity-80 transition-opacity",
+                            src: LOGO,
+                            alt: "分班",
+                            onclick: move |_| {
+                                step.set(AppStep::SelectFile);
+                                file_path.set(None);
+                                headers.set(Vec::new());
+                                preview_data.set(Vec::new());
+                                column_mappings.set(Vec::new());
+                                result_classes.set(Vec::new());
+                                result_summary.set(None);
+                                success_message.set(None);
+                                error_message.set(None);
+                                optimization_params.set(OptimizationParams::default());
+                            },
+                        }
                     }
                 }
 
@@ -370,10 +386,7 @@ pub fn Home() -> Element {
                                 }
                             },
                             AppStep::Processing => rsx! {
-                                ProcessingView {
-                                    num_classes,
-                                    optimization_params,
-                                }
+                                ProcessingView { num_classes, optimization_params }
                             },
                             AppStep::Results => rsx! {
                                 ResultsView {

@@ -138,9 +138,7 @@ pub fn ProcessingView(
                             }
                             div { class: "flex justify-between items-center bg-base-100 rounded px-3 py-2",
                                 span { class: "text-base-content/70", "惩罚幂次" }
-                                span { class: "font-mono",
-                                    "{optimization_params.read().penalty_power}"
-                                }
+                                span { class: "font-mono", "{optimization_params.read().penalty_power}" }
                             }
                             div { class: "flex justify-between items-center bg-base-100 rounded px-3 py-2",
                                 span { class: "text-base-content/70", "良好解阈值" }

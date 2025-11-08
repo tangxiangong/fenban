@@ -25,24 +25,6 @@ fn load_window_icon() -> Option<TaoIcon> {
 }
 
 fn main() {
-    // Custom HTML
-    let index_html = r#"
-        <!doctype html>
-        <html>
-            <head>
-                <title>FenBan</title>
-                <meta
-                    name="viewport"
-                    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-                />
-            </head>
-
-            <body>
-                <div id="main"></div>
-            </body>
-        </html>
-"#.to_string();
-
     // Custom MENU
     let menu = Menu::new();
     let home_menu = Submenu::new("主页", true);
@@ -83,15 +65,17 @@ fn main() {
             WindowBuilder::new()
                 .with_title("FenBan")
                 .with_window_icon(load_window_icon())
+                .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(1200.0, 800.0))
         }
         #[cfg(target_os = "macos")]
         {
-            WindowBuilder::new().with_title("FenBan")
+            WindowBuilder::new()
+                .with_title("FenBan")
+                .with_inner_size(dioxus::desktop::tao::dpi::LogicalSize::new(1200.0, 800.0))
         }
     };
 
     let config = Config::new()
-        .with_custom_index(index_html)
         .with_window(window_builder)
         .with_data_directory(dirs::config_dir().unwrap().join("FenBan"))
         .with_menu(menu);
