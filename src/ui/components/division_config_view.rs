@@ -81,7 +81,8 @@ pub fn DivisionConfigView(
                     div {
                         h3 { class: "font-bold", "当前方案约束" }
                         ul { class: "list-disc list-inside text-sm mt-2",
-                            li { "平均分差值 ≤ {optimization_params.read().max_score_diff} 分" }
+                            li { "总分差值 ≤ {optimization_params.read().max_score_diff} 分" }
+                            li { "单科分差值 ≤ {optimization_params.read().max_subject_score_diff} 分" }
                             li { "性别比例差 ≤ {(optimization_params.read().max_gender_ratio_diff * 100.0):.1}%" }
                             li { "班级人数差 ≤ {optimization_params.read().max_class_size_diff} 人" }
                         }
@@ -126,6 +127,26 @@ pub fn DivisionConfigView(
                                     }
                                     span { class: "text-xs text-base-content/60 flex-1",
                                         "各班级平均总分之间允许的最大差值。值越小约束越严格。"
+                                    }
+                                }
+
+                                // 单科平均分最大差值
+                                div { class: "flex items-center gap-4",
+                                    label { class: "shrink-0 w-48 text-sm font-medium", "单科平均分最大差值（分）" }
+                                    input {
+                                        r#type: "number",
+                                        class: "input input-bordered input-sm w-20",
+                                        value: "{optimization_params.read().max_subject_score_diff}",
+                                        step: "0.1",
+                                        min: "0.1",
+                                        oninput: move |evt| {
+                                            if let Ok(val) = evt.value().parse::<f64>() && val > 0.0 {
+                                                optimization_params.write().max_subject_score_diff = val;
+                                            }
+                                        },
+                                    }
+                                    span { class: "text-xs text-base-content/60 flex-1",
+                                        "各班级单科平均分之间允许的最大差值。独立控制各科目均衡度。"
                                     }
                                 }
 

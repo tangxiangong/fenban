@@ -50,6 +50,9 @@ pub struct OptimizationParams {
     /// 平均分最大允许差值（默认：1.0 分）
     pub max_score_diff: f64,
 
+    /// 单科平均分最大允许差值（默认：1.0 分）
+    pub max_subject_score_diff: f64,
+
     /// 班级人数最大允许差值（默认：5 人）
     pub max_class_size_diff: usize,
 
@@ -111,6 +114,7 @@ impl Default for OptimizationParams {
         Self {
             // 硬约束阈值 - 严格按照需求设置
             max_score_diff: 1.0,
+            max_subject_score_diff: 1.0,
             max_class_size_diff: 5,
             max_gender_ratio_diff: 0.1,
 
@@ -145,6 +149,7 @@ impl OptimizationParams {
     pub fn relaxed() -> Self {
         Self {
             max_score_diff: 2.0,
+            max_subject_score_diff: 2.0,
             max_gender_ratio_diff: 0.15,
             penalty_power: 3,
             initial_temperature: 8_000.0,
@@ -157,6 +162,7 @@ impl OptimizationParams {
     pub fn strict() -> Self {
         Self {
             max_score_diff: 0.5,
+            max_subject_score_diff: 0.5,
             max_gender_ratio_diff: 0.05,
             penalty_power: 5,
             total_score_penalty_weight: 5_000_000_000.0,
@@ -426,8 +432,8 @@ impl Solution {
                 / num_classes as f64;
 
             // 硬约束惩罚
-            if max_subject_diff > params.max_score_diff {
-                subject_penalties += (max_subject_diff - params.max_score_diff)
+            if max_subject_diff > params.max_subject_score_diff {
+                subject_penalties += (max_subject_diff - params.max_subject_score_diff)
                     .powi(params.penalty_power)
                     * params.subject_score_penalty_weight;
             }
