@@ -266,28 +266,15 @@ pub fn ResultsView(
 
             // 操作按钮
             div { class: "flex justify-center gap-4",
-                // 导出按钮（下拉选择）
-                div { class: "dropdown dropdown-top",
-                    div {
-                        tabindex: 0,
-                        role: "button",
-                        class: "btn btn-primary",
-                        "导出结果 ▼"
-                    }
-                    ul {
-                        tabindex: 0,
-                        class: "dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow-lg mb-2",
-                        li {
-                            a { onclick: move |_| on_export.call("xlsx".to_string()),
-                                "Excel"
-                            }
-                        }
-                        li {
-                            a { onclick: move |_| on_export.call("csv".to_string()),
-                                "CSV"
-                            }
-                        }
-                    }
+                button {
+                    class: "btn btn-primary",
+                    onclick: move |_| on_export.call("xlsx".to_string()),
+                    "导出 Excel"
+                }
+                button {
+                    class: "btn btn-secondary",
+                    onclick: move |_| on_export.call("csv".to_string()),
+                    "导出 CSV"
                 }
                 button {
                     class: "btn btn-outline",
