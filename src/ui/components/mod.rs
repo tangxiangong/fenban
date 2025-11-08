@@ -10,20 +10,20 @@ pub mod utils;
 pub use utils::*;
 
 // 视图组件
-pub mod select_file_view;
-pub use select_file_view::*;
+pub mod select_file;
+pub use select_file::*;
 
-pub mod preview_data_view;
-pub use preview_data_view::*;
+pub mod preview_data;
+pub use preview_data::*;
 
-pub mod column_config_view;
-pub use column_config_view::*;
+pub mod column_config;
+pub use column_config::*;
 
-pub mod division_config_view;
-pub use division_config_view::*;
+pub mod division_config;
+pub use division_config::*;
 
-pub mod processing_view;
-pub use processing_view::*;
+pub mod processing;
+pub use processing::*;
 
-pub mod results_view;
-pub use results_view::*;
+pub mod results;
+pub use results::*;
