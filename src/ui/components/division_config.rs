@@ -42,7 +42,7 @@ pub fn DivisionConfigView(
                             }
                         }
                     }
-                    }
+                }
                 // 预设方案选择
                 div { class: "form-control w-full max-w-xs",
                     label { class: "label",
@@ -82,9 +82,15 @@ pub fn DivisionConfigView(
                         h3 { class: "font-bold", "当前方案约束" }
                         ul { class: "list-disc list-inside text-sm mt-2",
                             li { "总分差值 ≤ {optimization_params.read().max_score_diff} 分" }
-                            li { "单科分差值 ≤ {optimization_params.read().max_subject_score_diff} 分" }
-                            li { "性别比例差 ≤ {(optimization_params.read().max_gender_ratio_diff * 100.0):.1}%" }
-                            li { "班级人数差 ≤ {optimization_params.read().max_class_size_diff} 人" }
+                            li {
+                                "单科分差值 ≤ {optimization_params.read().max_subject_score_diff} 分"
+                            }
+                            li {
+                                "性别比例差 ≤ {(optimization_params.read().max_gender_ratio_diff * 100.0):.1}%"
+                            }
+                            li {
+                                "班级人数差 ≤ {optimization_params.read().max_class_size_diff} 人"
+                            }
                         }
                     }
                 }
@@ -98,9 +104,7 @@ pub fn DivisionConfigView(
                             show_advanced.set(evt.checked());
                         },
                     }
-                    div { class: "collapse-title text-lg font-medium",
-                        "⚙️ 高级优化参数"
-                    }
+                    div { class: "collapse-title text-lg font-medium", "⚙️ 高级优化参数" }
                     div { class: "collapse-content",
                         div { class: "space-y-6 pt-4",
 
@@ -112,7 +116,9 @@ pub fn DivisionConfigView(
                             div { class: "space-y-3",
                                 // 平均分最大差值
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "平均分最大差值（分）" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "平均分最大差值（分）"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -132,7 +138,9 @@ pub fn DivisionConfigView(
 
                                 // 单科平均分最大差值
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "单科平均分最大差值（分）" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "单科平均分最大差值（分）"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -152,7 +160,9 @@ pub fn DivisionConfigView(
 
                                 // 班级人数最大差值
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "班级人数最大差值（人）" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "班级人数最大差值（人）"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -171,7 +181,9 @@ pub fn DivisionConfigView(
 
                                 // 性别比例最大差值
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "性别比例最大差值" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "性别比例最大差值"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -199,7 +211,9 @@ pub fn DivisionConfigView(
                             div { class: "space-y-3",
                                 // 总分惩罚权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "总分差值惩罚权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "总分差值惩罚权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-36",
@@ -219,7 +233,9 @@ pub fn DivisionConfigView(
 
                                 // 科目分惩罚权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "科目分差值惩罚权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "科目分差值惩罚权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-36",
@@ -239,7 +255,9 @@ pub fn DivisionConfigView(
 
                                 // 性别比例惩罚权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "性别比例惩罚权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "性别比例惩罚权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-40",
@@ -259,7 +277,9 @@ pub fn DivisionConfigView(
 
                                 // 惩罚幂次
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "惩罚函数幂次" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "惩罚函数幂次"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-16",
@@ -286,7 +306,9 @@ pub fn DivisionConfigView(
                             div { class: "space-y-3",
                                 // 总分方差权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "总分方差权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "总分方差权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-24",
@@ -306,7 +328,9 @@ pub fn DivisionConfigView(
 
                                 // 性别方差权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "性别方差权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "性别方差权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-24",
@@ -326,7 +350,9 @@ pub fn DivisionConfigView(
 
                                 // 科目方差权重
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "科目方差权重" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "科目方差权重"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-24",
@@ -353,7 +379,9 @@ pub fn DivisionConfigView(
                             div { class: "space-y-3",
                                 // 初始温度
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "初始温度" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "初始温度"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-28",
@@ -373,7 +401,9 @@ pub fn DivisionConfigView(
 
                                 // 冷却速率
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "冷却速率" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "冷却速率"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-28",
@@ -394,7 +424,9 @@ pub fn DivisionConfigView(
 
                                 // 温度多样性增量
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "温度多样性增量" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "温度多样性增量"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-28",
@@ -421,7 +453,9 @@ pub fn DivisionConfigView(
                             div { class: "space-y-3",
                                 // 良好解阈值
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "良好解阈值" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "良好解阈值"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -441,7 +475,9 @@ pub fn DivisionConfigView(
 
                                 // 重新加热迭代次数
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "重新加热迭代次数" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "重新加热迭代次数"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-24",
@@ -461,7 +497,9 @@ pub fn DivisionConfigView(
 
                                 // 重新加热温度倍数
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "重新加热温度倍数" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "重新加热温度倍数"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-20",
@@ -482,7 +520,9 @@ pub fn DivisionConfigView(
 
                                 // 重新加热最小接受次数
                                 div { class: "flex items-center gap-4",
-                                    label { class: "shrink-0 w-48 text-sm font-medium", "重新加热最小接受次数" }
+                                    label { class: "shrink-0 w-48 text-sm font-medium",
+                                        "重新加热最小接受次数"
+                                    }
                                     input {
                                         r#type: "number",
                                         class: "input input-bordered input-sm w-24",
