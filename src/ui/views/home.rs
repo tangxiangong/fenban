@@ -370,7 +370,10 @@ pub fn Home() -> Element {
                                 }
                             },
                             AppStep::Processing => rsx! {
-                                ProcessingView {}
+                                ProcessingView {
+                                    num_classes,
+                                    optimization_params,
+                                }
                             },
                             AppStep::Results => rsx! {
                                 ResultsView {
