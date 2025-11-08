@@ -11,6 +11,9 @@ pub static ICON_INFO: Asset = asset!("assets/icons/info.svg");
 pub static ICON_ERROR: Asset = asset!("assets/icons/error.svg");
 pub static ICON_SUCCESS: Asset = asset!("assets/icons/success.svg");
 pub static ICON_WARNING: Asset = asset!("assets/icons/warning.svg");
+pub static ICON_TRASH: Asset = asset!("assets/icons/trash.svg");
+pub static ICON_SETTINGS: Asset = asset!("assets/icons/settings.svg");
+pub static ICON_HISTORY: Asset = asset!("assets/icons/history.svg");
 
 // tailwindcss
 pub static TAILWINDCSS: Asset = asset!("assets/tailwind.css");

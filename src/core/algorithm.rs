@@ -46,7 +46,7 @@ impl DivideConfig {
 /// 优化参数配置
 ///
 /// 包含所有约束阈值和代价函数权重参数
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct OptimizationParams {
     // ===== 硬约束阈值 =====
     /// 平均分最大允许差值（默认：1.0 分）

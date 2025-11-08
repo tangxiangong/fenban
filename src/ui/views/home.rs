@@ -2,6 +2,7 @@ use crate::core::{
     algorithm::{
         DivideConfig, OptimizationParams, divide_students, validate_constraints_with_params,
     },
+    history::{HistoryManager, HistoryRecord},
     io::{
         ExcelColumnConfig, export_classes_to_csv_with_extras, export_classes_to_excel_with_extras,
         read_students_from_csv_with_config, read_students_from_excel_with_config,
@@ -9,7 +10,7 @@ use crate::core::{
     model::Class,
 };
 use crate::ui::components::*;
-use crate::ui::{ICON_ERROR, ICON_SUCCESS, LOGO};
+use crate::ui::{ICON_ERROR, ICON_HISTORY, ICON_SUCCESS, LOGO};
 use dioxus::prelude::*;
 use rfd::AsyncFileDialog;
 
@@ -27,6 +28,8 @@ pub fn Home() -> Element {
     let mut result_classes = use_signal(Vec::<Class>::new);
     let mut result_summary = use_signal(|| None::<String>);
     let mut optimization_params = use_signal(OptimizationParams::default);
+    let mut last_export_path = use_signal(|| None::<String>);
+    let history_refresh = use_signal(|| 0u32); // 用于触发历史记录刷新
 
     // 文件选择处理
     let select_file = move |_| {
@@ -214,6 +217,9 @@ pub fn Home() -> Element {
     let export_results = move |format: String| {
         let classes = result_classes.read().clone();
         let mappings = column_mappings.read().clone();
+        let input_path_val = file_path.read().clone();
+        let num_classes_val = *num_classes.read();
+        let mut refresh = history_refresh;
 
         spawn(async move {
             // 根据格式设置默认文件名和过滤器
@@ -265,6 +271,27 @@ pub fn Home() -> Element {
 
                 match export_result {
                     Ok(_) => {
+                        // 保存到历史记录
+                        if let (Some(input_path), Ok(manager)) =
+                            (input_path_val, HistoryManager::new())
+                        {
+                            let num_students: usize =
+                                classes.iter().map(|c| c.students.len()).sum();
+                            let params = optimization_params.read().clone();
+                            let record = HistoryRecord::new(
+                                input_path,
+                                Some(output_path.clone()),
+                                num_classes_val,
+                                num_students,
+                                format.clone(),
+                                params,
+                            );
+                            let _ = manager.add_record(record);
+                            // 触发历史记录刷新
+                            refresh.set(refresh() + 1);
+                        }
+
+                        last_export_path.set(Some(output_path.clone()));
                         success_message
                             .set(Some(format!("导出成功！\n文件已保存至: {}", output_path)));
                     }
@@ -280,25 +307,23 @@ pub fn Home() -> Element {
         div { class: "min-h-screen bg-base-200 p-4 md:p-8",
             div { class: "max-w-7xl mx-auto",
                 // 标题
-                div { class: "text-center mb-6",
-                    div { class: "flex items-center justify-center gap-3 mb-2",
-                        img {
-                            class: "w-12 h-12 md:w-16 md:h-16 cursor-pointer hover:opacity-80 transition-opacity",
-                            src: LOGO,
-                            alt: "分班",
-                            onclick: move |_| {
-                                step.set(AppStep::SelectFile);
-                                file_path.set(None);
-                                headers.set(Vec::new());
-                                preview_data.set(Vec::new());
-                                column_mappings.set(Vec::new());
-                                result_classes.set(Vec::new());
-                                result_summary.set(None);
-                                success_message.set(None);
-                                error_message.set(None);
-                                optimization_params.set(OptimizationParams::default());
-                            },
-                        }
+                div { class: "flex items-center justify-center gap-3 mb-6",
+                    img {
+                        class: "w-12 h-12 md:w-16 md:h-16 cursor-pointer hover:opacity-80 transition-opacity",
+                        src: LOGO,
+                        alt: "分班",
+                        onclick: move |_| {
+                            step.set(AppStep::SelectFile);
+                            file_path.set(None);
+                            headers.set(Vec::new());
+                            preview_data.set(Vec::new());
+                            column_mappings.set(Vec::new());
+                            result_classes.set(Vec::new());
+                            result_summary.set(None);
+                            success_message.set(None);
+                            error_message.set(None);
+                            optimization_params.set(OptimizationParams::default());
+                        },
                     }
                 }
 
@@ -409,6 +434,18 @@ pub fn Home() -> Element {
                                 }
                             },
                         }
+                    }
+                }
+
+                // 历史记录折叠列表（在卡片外面）
+                div { class: "collapse collapse-arrow bg-base-200 mt-6",
+                    input { r#type: "checkbox" }
+                    div { class: "collapse-title text-sm font-medium flex items-center gap-2",
+                        img { class: "w-4 h-4", src: ICON_HISTORY }
+                        "历史记录"
+                    }
+                    div { class: "collapse-content",
+                        HistoryCollapsedView { refresh_trigger: history_refresh() }
                     }
                 }
             }

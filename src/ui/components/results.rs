@@ -206,6 +206,8 @@ pub fn ResultsView(
                                         let mut pages_to_show = Vec::new();
                                         pages_to_show.push(0);
 
+
+
                                         let start = if current > 2 { current - 1 } else { 1 };
                                         let end = (current + 2).min(total_pages - 1);
 

@@ -1,6 +1,10 @@
 pub mod updater;
 pub use updater::*;
 
+// 历史记录
+pub mod history;
+pub use history::*;
+
 // 数据类型
 pub mod types;
 pub use types::*;
