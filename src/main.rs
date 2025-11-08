@@ -8,7 +8,7 @@ use dioxus::{
 };
 use fenban::ui::App;
 
-static ABOUT_ICON: &[u8] = include_bytes!("../assets/transparent_logo.png");
+static ABOUT_ICON: &[u8] = include_bytes!("../assets/logo.png");
 
 #[cfg(not(target_os = "macos"))]
 static WINDOW_ICON: &[u8] = include_bytes!("../icons/windowicon.png");

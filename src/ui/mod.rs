@@ -6,7 +6,7 @@ pub mod components;
 pub mod views;
 
 // icon assets
-pub static LOGO: Asset = asset!("assets/transparent_logo.png");
+pub static LOGO: Asset = asset!("assets/logo.png");
 pub static ICON_DOCUMENT: Asset = asset!("assets/icons/document.svg");
 pub static ICON_INFO: Asset = asset!("assets/icons/info.svg");
 pub static ICON_ERROR: Asset = asset!("assets/icons/error.svg");
