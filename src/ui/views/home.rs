@@ -1,5 +1,7 @@
 use crate::core::{
-    algorithm::{DivideConfig, divide_students, validate_constraints_with_params},
+    algorithm::{
+        DivideConfig, OptimizationParams, divide_students, validate_constraints_with_params,
+    },
     io::{
         ExcelColumnConfig, export_classes_to_excel_with_extras,
         read_students_from_excel_with_config,
@@ -24,6 +26,7 @@ pub fn Home() -> Element {
     let mut success_message = use_signal(|| None::<String>);
     let mut result_classes = use_signal(Vec::<Class>::new);
     let mut result_summary = use_signal(|| None::<String>);
+    let mut optimization_params = use_signal(OptimizationParams::default);
 
     // 文件选择处理
     let select_file = move |_| {
@@ -114,6 +117,7 @@ pub fn Home() -> Element {
 
         let mappings = column_mappings.read().clone();
         let classes = *num_classes.read();
+        let opt_params = optimization_params.read().clone();
 
         // 立即切换到 Processing 状态
         processing.set(true);
@@ -161,7 +165,8 @@ pub fn Home() -> Element {
             match config_builder.build() {
                 Ok(config) => match read_students_from_excel_with_config(&path, &config) {
                     Ok(students) => {
-                        let divide_config = DivideConfig::new(classes);
+                        let divide_config =
+                            DivideConfig::new(classes).with_optimization_params(opt_params.clone());
                         let classes_result = divide_students(&students, divide_config.clone());
                         let validation = validate_constraints_with_params(
                             &classes_result,
@@ -332,6 +337,7 @@ pub fn Home() -> Element {
                             AppStep::ConfigureDivision => rsx! {
                                 DivisionConfigView {
                                     num_classes,
+                                    optimization_params,
                                     on_start: start_division,
                                     on_back: move |_| step.set(AppStep::ConfigureColumns),
                                 }
@@ -355,6 +361,7 @@ pub fn Home() -> Element {
                                         result_summary.set(None);
                                         success_message.set(None);
                                         error_message.set(None);
+                                        optimization_params.set(OptimizationParams::default());
                                     },
                                 }
                             },
