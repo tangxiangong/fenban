@@ -1,11 +1,10 @@
 use super::model::{Class, Gender, Student};
 use calamine::{Data, DataType, Reader, Xls, Xlsx, open_workbook};
 use csv::{Reader as CsvReader, Writer as CsvWriter};
+use fs_err::File;
 use rayon::prelude::*;
 use rust_xlsxwriter::{Format, Workbook};
 use std::collections::HashMap;
-use std::error::Error;
-use std::fs::File;
 
 /// Excel 列配置
 #[derive(Debug, Clone)]
@@ -39,7 +38,7 @@ impl ExcelColumnConfig {
     }
 
     /// 从表头自动推断配置
-    pub fn from_header(header: &[Data]) -> Result<Self, Box<dyn Error>> {
+    pub fn from_header(header: &[Data]) -> Self {
         let mut config = Self {
             name_column: 0,
             student_id_column: None,
@@ -56,7 +55,7 @@ impl ExcelColumnConfig {
             }
         }
 
-        Ok(config)
+        config
     }
 
     /// 手动构建配置
@@ -107,11 +106,15 @@ impl ExcelColumnConfigBuilder {
         self
     }
 
-    pub fn build(self) -> Result<ExcelColumnConfig, Box<dyn Error>> {
+    pub fn build(self) -> anyhow::Result<ExcelColumnConfig> {
         Ok(ExcelColumnConfig {
-            name_column: self.name_column.ok_or("姓名列未指定")?,
+            name_column: self
+                .name_column
+                .ok_or_else(|| anyhow::anyhow!("姓名列未指定"))?,
             student_id_column: self.student_id_column,
-            gender_column: self.gender_column.ok_or("性别列未指定")?,
+            gender_column: self
+                .gender_column
+                .ok_or_else(|| anyhow::anyhow!("性别列未指定"))?,
             total_score_column: self.total_score_column,
             subject_columns: self.subject_columns,
             extra_columns: self.extra_columns,
@@ -127,7 +130,7 @@ enum ExcelWorkbook {
 
 impl ExcelWorkbook {
     /// 打开 Excel 文件（自动识别 .xls 和 .xlsx 格式）
-    fn open(file_path: &str) -> Result<Self, Box<dyn Error>> {
+    fn open(file_path: &str) -> anyhow::Result<Self> {
         if file_path.to_lowercase().ends_with(".xls") {
             let workbook: Xls<_> = open_workbook(file_path)?;
             Ok(ExcelWorkbook::Xls(workbook))
@@ -135,7 +138,7 @@ impl ExcelWorkbook {
             let workbook: Xlsx<_> = open_workbook(file_path)?;
             Ok(ExcelWorkbook::Xlsx(workbook))
         } else {
-            Err("不支持的文件格式，仅支持 .xls 和 .xlsx 文件".into())
+            anyhow::bail!("不支持的文件格式，仅支持 .xls 和 .xlsx 文件");
         }
     }
 
@@ -148,7 +151,7 @@ impl ExcelWorkbook {
     }
 
     /// 获取工作表范围
-    fn worksheet_range(&mut self, name: &str) -> Result<calamine::Range<Data>, Box<dyn Error>> {
+    fn worksheet_range(&mut self, name: &str) -> anyhow::Result<calamine::Range<Data>> {
         match self {
             ExcelWorkbook::Xls(wb) => Ok(wb.worksheet_range(name)?),
             ExcelWorkbook::Xlsx(wb) => Ok(wb.worksheet_range(name)?),
@@ -160,14 +163,14 @@ impl ExcelWorkbook {
 pub fn read_students_from_excel_with_config(
     file_path: &str,
     config: &ExcelColumnConfig,
-) -> Result<Vec<Student>, Box<dyn Error>> {
+) -> anyhow::Result<Vec<Student>> {
     let mut workbook = ExcelWorkbook::open(file_path)?;
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)?;
 
     let rows: Vec<_> = range.rows().collect();
     if rows.len() <= 1 {
-        return Err("Excel 文件没有数据行".into());
+        anyhow::bail!("Excel 文件没有数据");
     }
 
     // 并行处理学生数据
@@ -227,23 +230,21 @@ pub fn read_students_from_excel_with_config(
         .collect();
 
     if students.is_empty() {
-        return Err("未读取到任何学生数据".into());
+        anyhow::bail!("未读取到任何学生数据");
     }
 
     Ok(students)
 }
 
 /// 从 Excel 读取学生数据（保持向后兼容）
-pub fn read_students_from_excel(
-    file_path: &str,
-) -> Result<(Vec<Student>, Vec<String>), Box<dyn Error>> {
+pub fn read_students_from_excel(file_path: &str) -> anyhow::Result<(Vec<Student>, Vec<String>)> {
     let mut workbook = ExcelWorkbook::open(file_path)?;
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)?;
 
     let rows: Vec<_> = range.rows().collect();
     if rows.is_empty() {
-        return Err("Excel 文件为空".into());
+        anyhow::bail!("Excel 文件为空");
     }
 
     // 读取表头
@@ -254,7 +255,7 @@ pub fn read_students_from_excel(
         .collect();
 
     if subjects.is_empty() {
-        return Err("未找到科目列".into());
+        anyhow::bail!("未找到科目列");
     }
 
     // 并行处理学生数据
@@ -300,7 +301,7 @@ pub fn read_students_from_excel(
         .collect();
 
     if students.is_empty() {
-        return Err("未读取到任何学生数据".into());
+        anyhow::bail!("未读取到任何学生数据");
     }
 
     Ok((students, subjects))
@@ -361,7 +362,7 @@ pub fn export_classes_to_excel_with_extras(
     file_path: &str,
     subjects: &[&str],
     extra_field_names: &[&str],
-) -> Result<(), Box<dyn Error>> {
+) -> anyhow::Result<()> {
     let mut workbook = Workbook::new();
 
     // 创建格式
@@ -398,8 +399,6 @@ pub fn export_classes_to_excel_with_extras(
     for class in classes {
         for student in &class.students {
             let mut col = 0u16;
-
-            // 班级（从 1 开始）
             sheet.write(row, col, (class.id + 1) as f64)?;
             col += 1;
 
@@ -499,7 +498,7 @@ pub fn export_classes_to_excel(
     classes: &[Class],
     file_path: &str,
     subjects: &[&str],
-) -> Result<(), Box<dyn Error>> {
+) -> anyhow::Result<()> {
     export_classes_to_excel_with_extras(classes, file_path, subjects, &[])
 }
 
@@ -507,7 +506,7 @@ pub fn export_classes_to_excel(
 pub fn read_students_from_csv_with_config(
     file_path: &str,
     config: &ExcelColumnConfig,
-) -> Result<Vec<Student>, Box<dyn Error>> {
+) -> anyhow::Result<Vec<Student>> {
     let file = File::open(file_path)?;
     let mut rdr = CsvReader::from_reader(file);
 
@@ -578,7 +577,7 @@ pub fn read_students_from_csv_with_config(
         .collect();
 
     if students.is_empty() {
-        return Err("未读取到任何学生数据".into());
+        anyhow::bail!("未读取到任何学生数据");
     }
 
     Ok(students)
@@ -590,7 +589,7 @@ pub fn export_classes_to_csv_with_extras(
     file_path: &str,
     subjects: &[&str],
     extra_field_names: &[&str],
-) -> Result<(), Box<dyn Error>> {
+) -> anyhow::Result<()> {
     let file = File::create(file_path)?;
     let mut wtr = CsvWriter::from_writer(file);
 
@@ -666,7 +665,7 @@ pub fn export_classes_to_csv(
     classes: &[Class],
     file_path: &str,
     subjects: &[&str],
-) -> Result<(), Box<dyn Error>> {
+) -> anyhow::Result<()> {
     export_classes_to_csv_with_extras(classes, file_path, subjects, &[])
 }
 

@@ -1,6 +1,5 @@
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 /// 性别枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

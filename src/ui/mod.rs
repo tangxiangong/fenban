@@ -1,6 +1,5 @@
 use crate::ui::views::{Home, UpdateWindow};
-use dioxus::desktop::use_muda_event_handler;
-use dioxus::prelude::*;
+use dioxus::{desktop::use_muda_event_handler, prelude::*};
 
 pub mod components;
 pub mod views;

@@ -1,6 +1,10 @@
-use super::types::{ColumnMapping, ColumnType};
-use crate::core::model::{Class, Student};
-use crate::ui::ICON_WARNING;
+use crate::{
+    core::model::{Class, Student},
+    ui::{
+        ICON_WARNING,
+        components::types::{ColumnMapping, ColumnType},
+    },
+};
 use dioxus::prelude::*;
 
 #[component]

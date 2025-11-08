@@ -1,8 +1,10 @@
 use super::model::{Class, Gender, Student};
 use rand::{Rng, rng};
 use rayon::prelude::*;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 /// 分班配置
 #[derive(Debug, Clone)]

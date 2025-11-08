@@ -1,5 +1,4 @@
-use crate::core::algorithm::OptimizationParams;
-use crate::ui::ICON_INFO;
+use crate::{core::algorithm::OptimizationParams, ui::ICON_INFO};
 use dioxus::prelude::*;
 
 #[component]
@@ -70,7 +69,6 @@ pub fn DivisionConfigView(
                         }
                     }
                 }
-
 
                 // 约束说明
                 div { class: "alert alert-info",

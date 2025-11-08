@@ -1,13 +1,10 @@
 use super::types::ColumnType;
 use calamine::{Data, Reader, Xls, Xlsx, open_workbook};
 use csv::Reader as CsvReader;
-use std::fs::File;
+use fs_err::File;
 
 /// 读取 CSV 文件的所有数据
-#[allow(clippy::type_complexity)]
-pub fn read_csv_all_data(
-    file_path: &str,
-) -> Result<(Vec<String>, Vec<Vec<String>>), Box<dyn std::error::Error>> {
+pub fn read_csv_all_data(file_path: &str) -> anyhow::Result<(Vec<String>, Vec<Vec<String>>)> {
     let file = File::open(file_path)?;
     let mut rdr = CsvReader::from_reader(file);
 
@@ -23,25 +20,19 @@ pub fn read_csv_all_data(
     }
 
     if rows.is_empty() {
-        return Err("文件没有数据".into());
+        anyhow::bail!("文件没有数据");
     }
 
     Ok((headers, rows))
 }
 
 /// 兼容旧函数名
-#[allow(clippy::type_complexity)]
-pub fn read_excel_all_data(
-    file_path: &str,
-) -> Result<(Vec<String>, Vec<Vec<String>>), Box<dyn std::error::Error>> {
+pub fn read_excel_all_data(file_path: &str) -> anyhow::Result<(Vec<String>, Vec<Vec<String>>)> {
     read_file_all_data(file_path)
 }
 
 /// 读取 Excel 或 CSV 文件的所有数据
-#[allow(clippy::type_complexity)]
-pub fn read_file_all_data(
-    file_path: &str,
-) -> Result<(Vec<String>, Vec<Vec<String>>), Box<dyn std::error::Error>> {
+pub fn read_file_all_data(file_path: &str) -> anyhow::Result<(Vec<String>, Vec<Vec<String>>)> {
     if file_path.to_lowercase().ends_with(".csv") {
         return read_csv_all_data(file_path);
     }
@@ -57,7 +48,7 @@ pub fn read_file_all_data(
             .collect();
 
         if all_rows.is_empty() {
-            return Err("文件没有数据".into());
+            anyhow::bail!("文件没有数据");
         }
 
         let headers = all_rows.remove(0);
@@ -73,7 +64,7 @@ pub fn read_file_all_data(
             .collect();
 
         if all_rows.is_empty() {
-            return Err("文件没有数据".into());
+            anyhow::bail!("文件没有数据");
         }
 
         let headers = all_rows.remove(0);
