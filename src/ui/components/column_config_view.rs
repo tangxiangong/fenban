@@ -30,7 +30,7 @@ pub fn ColumnConfigView(
                                 td { "{mapping.index + 1}" }
                                 td {
                                     select {
-                                        class: "select select-bordered select-sm",
+                                        class: "select select-bordered select-sm w-25",
                                         value: "{mapping.column_type.to_string()}",
                                         onchange: move |evt| {
                                             let new_type = ColumnType::from_string(&evt.value());
