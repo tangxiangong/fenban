@@ -1,63 +1,29 @@
 use super::model::{Class, Gender, Student};
 use calamine::{Data, DataType, Reader, Xls, Xlsx, open_workbook};
 use csv::{Reader as CsvReader, Writer as CsvWriter};
-use fs_err::File;
+use fs_err as fs;
 use rayon::prelude::*;
 use rust_xlsxwriter::{Format, Workbook};
-use std::collections::HashMap;
+use std::{collections::HashMap, io::BufReader};
 
 /// Excel 列配置
 #[derive(Debug, Clone)]
-pub struct ExcelColumnConfig {
-    /// 学生姓名所在列（0-based）
+pub struct ColumnConfig {
+    /// 学生姓名所在列
     pub name_column: usize,
-    /// 学号所在列（0-based），None 表示没有学号列
+    /// 学号所在列，None 表示没有学号列
     pub student_id_column: Option<usize>,
-    /// 性别所在列（0-based）
+    /// 性别所在列
     pub gender_column: usize,
-    /// 总成绩所在列（0-based），None 表示自动计算
+    /// 总成绩所在列，None 表示自动计算
     pub total_score_column: Option<usize>,
-    /// 单科成绩列（列名 -> 列索引）
+    /// 单科成绩列（列名 -> 列索引
     pub subject_columns: HashMap<String, usize>,
     /// 需要保留的额外列（列名 -> 列索引）
     pub extra_columns: HashMap<String, usize>,
 }
 
-impl ExcelColumnConfig {
-    /// 创建默认配置（兼容旧格式）
-    /// 格式：姓名 | 性别 | 科目1 | 科目2 | ...
-    pub fn default_legacy() -> Self {
-        Self {
-            name_column: 0,
-            student_id_column: None,
-            gender_column: 1,
-            total_score_column: None,
-            subject_columns: HashMap::new(), // 需要后续填充
-            extra_columns: HashMap::new(),
-        }
-    }
-
-    /// 从表头自动推断配置
-    pub fn from_header(header: &[Data]) -> Self {
-        let mut config = Self {
-            name_column: 0,
-            student_id_column: None,
-            gender_column: 1,
-            total_score_column: None,
-            subject_columns: HashMap::new(),
-            extra_columns: HashMap::new(),
-        };
-
-        // 从第3列开始是科目
-        for (idx, cell) in header.iter().enumerate().skip(2) {
-            if let Some(name) = cell.get_string() {
-                config.subject_columns.insert(name.to_string(), idx);
-            }
-        }
-
-        config
-    }
-
+impl ColumnConfig {
     /// 手动构建配置
     pub fn builder() -> ExcelColumnConfigBuilder {
         ExcelColumnConfigBuilder::default()
@@ -67,74 +33,70 @@ impl ExcelColumnConfig {
 /// Excel 列配置构建器
 #[derive(Debug, Default)]
 pub struct ExcelColumnConfigBuilder {
-    name_column: Option<usize>,
-    student_id_column: Option<usize>,
-    gender_column: Option<usize>,
-    total_score_column: Option<usize>,
-    subject_columns: HashMap<String, usize>,
-    extra_columns: HashMap<String, usize>,
+    name: Option<usize>,
+    id: Option<usize>,
+    gender: Option<usize>,
+    total_score: Option<usize>,
+    subject_score: HashMap<String, usize>,
+    extra: HashMap<String, usize>,
 }
 
 impl ExcelColumnConfigBuilder {
-    pub fn name_column(mut self, col: usize) -> Self {
-        self.name_column = Some(col);
+    pub fn name(mut self, col: usize) -> Self {
+        self.name = Some(col);
         self
     }
 
-    pub fn student_id_column(mut self, col: usize) -> Self {
-        self.student_id_column = Some(col);
+    pub fn id(mut self, col: usize) -> Self {
+        self.id = Some(col);
         self
     }
 
-    pub fn gender_column(mut self, col: usize) -> Self {
-        self.gender_column = Some(col);
+    pub fn gender(mut self, col: usize) -> Self {
+        self.gender = Some(col);
         self
     }
 
-    pub fn total_score_column(mut self, col: usize) -> Self {
-        self.total_score_column = Some(col);
+    pub fn total_score(mut self, col: usize) -> Self {
+        self.total_score = Some(col);
         self
     }
 
     pub fn add_subject(mut self, name: String, col: usize) -> Self {
-        self.subject_columns.insert(name, col);
+        self.subject_score.insert(name, col);
         self
     }
 
-    pub fn add_extra_column(mut self, name: String, col: usize) -> Self {
-        self.extra_columns.insert(name, col);
+    pub fn add_extra(mut self, name: String, col: usize) -> Self {
+        self.extra.insert(name, col);
         self
     }
 
-    pub fn build(self) -> anyhow::Result<ExcelColumnConfig> {
-        Ok(ExcelColumnConfig {
-            name_column: self
-                .name_column
-                .ok_or_else(|| anyhow::anyhow!("姓名列未指定"))?,
-            student_id_column: self.student_id_column,
-            gender_column: self
-                .gender_column
-                .ok_or_else(|| anyhow::anyhow!("性别列未指定"))?,
-            total_score_column: self.total_score_column,
-            subject_columns: self.subject_columns,
-            extra_columns: self.extra_columns,
+    pub fn build(self) -> anyhow::Result<ColumnConfig> {
+        Ok(ColumnConfig {
+            name_column: self.name.ok_or_else(|| anyhow::anyhow!("姓名列未指定"))?,
+            student_id_column: self.id,
+            gender_column: self.gender.ok_or_else(|| anyhow::anyhow!("性别列未指定"))?,
+            total_score_column: self.total_score,
+            subject_columns: self.subject_score,
+            extra_columns: self.extra,
         })
     }
 }
 
 /// Excel 工作簿枚举，支持 .xls 和 .xlsx 格式
 enum ExcelWorkbook {
-    Xls(Xls<std::io::BufReader<std::fs::File>>),
-    Xlsx(Xlsx<std::io::BufReader<std::fs::File>>),
+    Xls(Xls<BufReader<std::fs::File>>),
+    Xlsx(Xlsx<BufReader<std::fs::File>>),
 }
 
 impl ExcelWorkbook {
     /// 打开 Excel 文件（自动识别 .xls 和 .xlsx 格式）
     fn open(file_path: &str) -> anyhow::Result<Self> {
-        if file_path.to_lowercase().ends_with(".xls") {
+        if file_path.ends_with(".xls") {
             let workbook: Xls<_> = open_workbook(file_path)?;
             Ok(ExcelWorkbook::Xls(workbook))
-        } else if file_path.to_lowercase().ends_with(".xlsx") {
+        } else if file_path.ends_with(".xlsx") {
             let workbook: Xlsx<_> = open_workbook(file_path)?;
             Ok(ExcelWorkbook::Xlsx(workbook))
         } else {
@@ -160,15 +122,12 @@ impl ExcelWorkbook {
 }
 
 /// 从 Excel 读取学生数据（使用列配置）
-pub fn read_students_from_excel_with_config(
-    file_path: &str,
-    config: &ExcelColumnConfig,
-) -> anyhow::Result<Vec<Student>> {
+pub fn read_from_excel(file_path: &str, config: &ColumnConfig) -> anyhow::Result<Vec<Student>> {
     let mut workbook = ExcelWorkbook::open(file_path)?;
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)?;
 
-    let rows: Vec<_> = range.rows().collect();
+    let rows: Vec<&[Data]> = range.rows().collect();
     if rows.len() <= 1 {
         anyhow::bail!("Excel 文件没有数据");
     }
@@ -179,6 +138,7 @@ pub fn read_students_from_excel_with_config(
         .enumerate()
         .skip(1) // 跳过表头
         .filter_map(|(row_idx, row)| {
+            let row = *row;
             // 读取姓名
             let name = get_cell_string(row, config.name_column)?;
             if name.is_empty() {
@@ -220,7 +180,7 @@ pub fn read_students_from_excel_with_config(
 
             Some(Student {
                 name,
-                student_id,
+                id: student_id,
                 gender,
                 scores,
                 total_score,
@@ -234,77 +194,6 @@ pub fn read_students_from_excel_with_config(
     }
 
     Ok(students)
-}
-
-/// 从 Excel 读取学生数据（保持向后兼容）
-pub fn read_students_from_excel(file_path: &str) -> anyhow::Result<(Vec<Student>, Vec<String>)> {
-    let mut workbook = ExcelWorkbook::open(file_path)?;
-    let sheet_name = workbook.sheet_names()[0].clone();
-    let range = workbook.worksheet_range(&sheet_name)?;
-
-    let rows: Vec<_> = range.rows().collect();
-    if rows.is_empty() {
-        anyhow::bail!("Excel 文件为空");
-    }
-
-    // 读取表头
-    let subjects: Vec<String> = rows[0]
-        .iter()
-        .skip(2)
-        .filter_map(|cell| cell.get_string().map(|s| s.to_string()))
-        .collect();
-
-    if subjects.is_empty() {
-        anyhow::bail!("未找到科目列");
-    }
-
-    // 并行处理学生数据
-    let students: Vec<Student> = rows
-        .par_iter()
-        .enumerate()
-        .skip(1)
-        .filter_map(|(row_idx, row)| {
-            if row.len() < 2 {
-                return None;
-            }
-
-            let name = row[0].get_string()?.to_string();
-            if name.is_empty() {
-                return None;
-            }
-
-            let gender_str = row[1].get_string()?;
-            let gender = gender_str.parse::<Gender>().ok()?;
-
-            let mut scores = HashMap::with_capacity(subjects.len());
-            let mut total = 0.0;
-
-            for (idx, subject) in subjects.iter().enumerate() {
-                let score = if idx + 2 < row.len() {
-                    parse_score(&row[idx + 2])
-                } else {
-                    0.0
-                };
-                scores.insert(subject.clone(), score);
-                total += score;
-            }
-
-            Some(Student {
-                name,
-                student_id: Some(format!("R{}", row_idx + 1)),
-                gender,
-                scores,
-                total_score: total,
-                extra_fields: HashMap::new(),
-            })
-        })
-        .collect();
-
-    if students.is_empty() {
-        anyhow::bail!("未读取到任何学生数据");
-    }
-
-    Ok((students, subjects))
 }
 
 // 辅助函数：从单元格读取字符串
@@ -347,17 +236,15 @@ fn parse_score(cell: &calamine::Data) -> f64 {
 /// 辅助函数：检查是否有真实学号（不是自动生成的行号）
 fn has_real_student_ids(classes: &[Class]) -> bool {
     classes.iter().any(|class| {
-        class.students.iter().any(|student| {
-            student
-                .student_id
-                .as_ref()
-                .is_some_and(|id| !id.starts_with("R"))
-        })
+        class
+            .students
+            .iter()
+            .any(|student| student.id.as_ref().is_some_and(|id| !id.starts_with("R")))
     })
 }
 
 /// 导出分班结果到 Excel（带额外字段）
-pub fn export_classes_to_excel_with_extras(
+pub fn export_to_excel(
     classes: &[Class],
     file_path: &str,
     subjects: &[&str],
@@ -404,7 +291,7 @@ pub fn export_classes_to_excel_with_extras(
 
             // 学号（仅当有真实学号时）
             if has_student_id {
-                let student_id = student.student_id.as_deref().unwrap_or("");
+                let student_id = student.id.as_deref().unwrap_or("");
                 sheet.write_string(row, col, student_id)?;
                 col += 1;
             }
@@ -493,21 +380,9 @@ pub fn export_classes_to_excel_with_extras(
     Ok(())
 }
 
-/// 导出分班结果到 Excel（简化版，保持向后兼容）
-pub fn export_classes_to_excel(
-    classes: &[Class],
-    file_path: &str,
-    subjects: &[&str],
-) -> anyhow::Result<()> {
-    export_classes_to_excel_with_extras(classes, file_path, subjects, &[])
-}
-
 /// 从 CSV 读取学生数据（使用列配置）
-pub fn read_students_from_csv_with_config(
-    file_path: &str,
-    config: &ExcelColumnConfig,
-) -> anyhow::Result<Vec<Student>> {
-    let file = File::open(file_path)?;
+pub fn read_from_csv(file_path: &str, config: &ColumnConfig) -> anyhow::Result<Vec<Student>> {
+    let file = fs::File::open(file_path)?;
     let mut rdr = CsvReader::from_reader(file);
 
     // 读取表头（跳过）
@@ -567,7 +442,7 @@ pub fn read_students_from_csv_with_config(
 
             Some(Student {
                 name,
-                student_id,
+                id: student_id,
                 gender,
                 scores,
                 total_score,
@@ -584,13 +459,13 @@ pub fn read_students_from_csv_with_config(
 }
 
 /// 导出分班结果到 CSV（带额外字段）
-pub fn export_classes_to_csv_with_extras(
+pub fn export_to_csv(
     classes: &[Class],
     file_path: &str,
     subjects: &[&str],
     extra_field_names: &[&str],
 ) -> anyhow::Result<()> {
-    let file = File::create(file_path)?;
+    let file = fs::File::create(file_path)?;
     let mut wtr = CsvWriter::from_writer(file);
 
     // 检查是否有真实学号
@@ -619,7 +494,7 @@ pub fn export_classes_to_csv_with_extras(
 
             // 学号（仅当有真实学号时）
             if has_student_id {
-                let student_id = student.student_id.as_deref().unwrap_or("");
+                let student_id = student.id.as_deref().unwrap_or("");
                 record.push(student_id.to_string());
             }
 
@@ -658,15 +533,6 @@ pub fn export_classes_to_csv_with_extras(
 
     wtr.flush()?;
     Ok(())
-}
-
-/// 导出分班结果到 CSV（简化版）
-pub fn export_classes_to_csv(
-    classes: &[Class],
-    file_path: &str,
-    subjects: &[&str],
-) -> anyhow::Result<()> {
-    export_classes_to_csv_with_extras(classes, file_path, subjects, &[])
 }
 
 #[cfg(test)]

@@ -1,12 +1,7 @@
 use crate::core::{
-    algorithm::{
-        DivideConfig, OptimizationParams, divide_students, validate_constraints_with_params,
-    },
+    algorithm::{DivideConfig, OptimizationParams, divide, validate_constraints_with_params},
     history::{HistoryManager, HistoryRecord},
-    io::{
-        ExcelColumnConfig, export_classes_to_csv_with_extras, export_classes_to_excel_with_extras,
-        read_students_from_csv_with_config, read_students_from_excel_with_config,
-    },
+    io::{ColumnConfig, export_to_csv, export_to_excel, read_from_csv, read_from_excel},
     model::Class,
 };
 use crate::ui::components::*;
@@ -132,23 +127,23 @@ pub fn Home() -> Element {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
             // 构建列配置
-            let mut config_builder = ExcelColumnConfig::builder();
+            let mut config_builder = ColumnConfig::builder();
             let mut subject_names = Vec::new();
             let mut extra_field_names = Vec::new();
 
             for mapping in &mappings {
                 match mapping.column_type {
                     ColumnType::Name => {
-                        config_builder = config_builder.name_column(mapping.index);
+                        config_builder = config_builder.name(mapping.index);
                     }
                     ColumnType::Gender => {
-                        config_builder = config_builder.gender_column(mapping.index);
+                        config_builder = config_builder.gender(mapping.index);
                     }
                     ColumnType::StudentId => {
-                        config_builder = config_builder.student_id_column(mapping.index);
+                        config_builder = config_builder.id(mapping.index);
                     }
                     ColumnType::TotalScore => {
-                        config_builder = config_builder.total_score_column(mapping.index);
+                        config_builder = config_builder.total_score(mapping.index);
                     }
                     ColumnType::Subject => {
                         config_builder =
@@ -157,7 +152,7 @@ pub fn Home() -> Element {
                     }
                     ColumnType::Extra => {
                         config_builder =
-                            config_builder.add_extra_column(mapping.name.clone(), mapping.index);
+                            config_builder.add_extra(mapping.name.clone(), mapping.index);
                         extra_field_names.push(mapping.name.clone());
                     }
                     ColumnType::Ignore => {}
@@ -169,16 +164,16 @@ pub fn Home() -> Element {
                 Ok(config) => {
                     // 根据文件类型选择读取方式
                     let students_result = if path.to_lowercase().ends_with(".csv") {
-                        read_students_from_csv_with_config(&path, &config)
+                        read_from_csv(&path, &config)
                     } else {
-                        read_students_from_excel_with_config(&path, &config)
+                        read_from_excel(&path, &config)
                     };
 
                     match students_result {
                         Ok(students) => {
                             let divide_config = DivideConfig::new(classes)
                                 .with_optimization_params(opt_params.clone());
-                            let classes_result = divide_students(&students, divide_config.clone());
+                            let classes_result = divide(&students, divide_config.clone());
                             let validation = validate_constraints_with_params(
                                 &classes_result,
                                 &divide_config.optimization_params,
@@ -254,19 +249,9 @@ pub fn Home() -> Element {
 
                 // 根据文件扩展名选择导出格式
                 let export_result = if output_path.to_lowercase().ends_with(".csv") {
-                    export_classes_to_csv_with_extras(
-                        &classes,
-                        &output_path,
-                        &subjects_refs,
-                        &extras_refs,
-                    )
+                    export_to_csv(&classes, &output_path, &subjects_refs, &extras_refs)
                 } else {
-                    export_classes_to_excel_with_extras(
-                        &classes,
-                        &output_path,
-                        &subjects_refs,
-                        &extras_refs,
-                    )
+                    export_to_excel(&classes, &output_path, &subjects_refs, &extras_refs)
                 };
 
                 match export_result {
@@ -286,7 +271,7 @@ pub fn Home() -> Element {
                                 format.clone(),
                                 params,
                             );
-                            let _ = manager.add_record(record);
+                            let _ = manager.add(record);
                             // 触发历史记录刷新
                             refresh.set(refresh() + 1);
                         }

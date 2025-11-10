@@ -15,7 +15,7 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
         let _ = refresh_trigger;
         spawn(async move {
             match HistoryManager::new() {
-                Ok(manager) => match manager.load_history() {
+                Ok(manager) => match manager.load() {
                     Ok(history) => records.set(history),
                     Err(e) => error_msg.set(Some(format!("加载历史记录失败: {}", e))),
                 },
@@ -27,7 +27,7 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
     let clear_history = move |_| {
         spawn(async move {
             if let Ok(manager) = HistoryManager::new() {
-                if let Err(e) = manager.clear_history() {
+                if let Err(e) = manager.clear() {
                     error_msg.set(Some(format!("清空历史记录失败: {}", e)));
                 } else {
                     records.set(Vec::new());
@@ -152,9 +152,9 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
                                                         let ts = timestamp.clone();
                                                         spawn(async move {
                                                             if let Ok(manager) = HistoryManager::new() {
-                                                                if manager.delete_record(&ts).is_ok() {
+                                                                if manager.delete(&ts).is_ok() {
                                                                     // 重新加载列表
-                                                                    if let Ok(history) = manager.load_history() {
+                                                                    if let Ok(history) = manager.load() {
                                                                         records.set(history);
                                                                     }
                                                                 } else {
@@ -237,7 +237,7 @@ pub fn HistoryView(on_close: EventHandler<()>, on_open_file: EventHandler<String
     use_effect(move || {
         spawn(async move {
             match HistoryManager::new() {
-                Ok(manager) => match manager.load_history() {
+                Ok(manager) => match manager.load() {
                     Ok(history) => records.set(history),
                     Err(e) => error_msg.set(Some(format!("加载历史记录失败: {}", e))),
                 },
@@ -249,7 +249,7 @@ pub fn HistoryView(on_close: EventHandler<()>, on_open_file: EventHandler<String
     let clear_history = move |_| {
         spawn(async move {
             if let Ok(manager) = HistoryManager::new() {
-                if let Err(e) = manager.clear_history() {
+                if let Err(e) = manager.clear() {
                     error_msg.set(Some(format!("清空历史记录失败: {}", e)));
                 } else {
                     records.set(Vec::new());

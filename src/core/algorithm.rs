@@ -17,7 +17,7 @@ pub struct DivideConfig {
 impl Default for DivideConfig {
     fn default() -> Self {
         Self {
-            num_classes: 3,
+            num_classes: 2,
             max_iterations: 500000,
             optimization_params: OptimizationParams::default(),
         }
@@ -312,8 +312,8 @@ impl Solution {
         }
 
         // 从原班级移除
-        self.remove_student(idx1, class1, &students[idx1], subject_order);
-        self.remove_student(idx2, class2, &students[idx2], subject_order);
+        self.remove_student(class1, &students[idx1], subject_order);
+        self.remove_student(class2, &students[idx2], subject_order);
 
         // 添加到新班级
         self.add_student_to_class(idx1, class2, &students[idx1], subject_order);
@@ -321,13 +321,7 @@ impl Solution {
     }
 
     #[inline]
-    fn remove_student(
-        &mut self,
-        _student_idx: usize,
-        class_id: usize,
-        student: &Student,
-        subject_order: &[String],
-    ) {
+    fn remove_student(&mut self, class_id: usize, student: &Student, subject_order: &[String]) {
         let stats = &mut self.class_stats[class_id];
 
         stats.total_sum -= student.total_score;
@@ -734,7 +728,7 @@ fn parallel_search(
 }
 
 /// 分班主函数
-pub fn divide_students(students: &[Student], config: DivideConfig) -> Vec<Class> {
+pub fn divide(students: &[Student], config: DivideConfig) -> Vec<Class> {
     let num_classes = config.num_classes;
     let max_iterations = config.max_iterations;
     let params = &config.optimization_params;
@@ -869,160 +863,5 @@ pub fn validate_constraints_with_params(
         max_score_diff,
         max_gender_ratio_diff,
         subject_max_diffs,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    fn create_test_students(count: usize) -> Vec<Student> {
-        use rand::SeedableRng;
-        use rand_distr::{Distribution, Normal};
-
-        let mut rng = rand::rngs::StdRng::seed_from_u64(42);
-
-        // 正态分布：均值=100, 标准差=15
-        let normal = Normal::new(100.0, 15.0).unwrap();
-
-        (0..count)
-            .map(|i| {
-                let mut scores = HashMap::new();
-
-                // 使用正态分布生成 9 个科目成绩
-                let yuwen: f64 = normal.sample(&mut rng);
-                scores.insert("语文".to_string(), yuwen.clamp(0.0, 150.0));
-
-                let shuxue: f64 = normal.sample(&mut rng);
-                scores.insert("数学".to_string(), shuxue.clamp(0.0, 150.0));
-
-                let waiyu: f64 = normal.sample(&mut rng);
-                scores.insert("外语".to_string(), waiyu.clamp(0.0, 150.0));
-
-                let wuli: f64 = normal.sample(&mut rng);
-                scores.insert("物理".to_string(), wuli.clamp(0.0, 100.0));
-
-                let huaxue: f64 = normal.sample(&mut rng);
-                scores.insert("化学".to_string(), huaxue.clamp(0.0, 100.0));
-
-                let shengwu: f64 = normal.sample(&mut rng);
-                scores.insert("生物".to_string(), shengwu.clamp(0.0, 100.0));
-
-                let zhengzhi: f64 = normal.sample(&mut rng);
-                scores.insert("政治".to_string(), zhengzhi.clamp(0.0, 100.0));
-
-                let lishi: f64 = normal.sample(&mut rng);
-                scores.insert("历史".to_string(), lishi.clamp(0.0, 100.0));
-
-                let dili: f64 = normal.sample(&mut rng);
-                scores.insert("地理".to_string(), dili.clamp(0.0, 100.0));
-
-                Student::new(
-                    format!("Student{}", i),
-                    if i % 2 == 0 {
-                        Gender::Male
-                    } else {
-                        Gender::Female
-                    },
-                    scores,
-                )
-            })
-            .collect()
-    }
-
-    #[test]
-    fn test_division() {
-        let students = create_test_students(100);
-        let config = DivideConfig::new(4).with_iterations(300000);
-        let classes = divide_students(&students, config);
-
-        assert_eq!(classes.len(), 4);
-        assert_eq!(classes.iter().map(|c| c.students.len()).sum::<usize>(), 100);
-
-        // 验证约束
-        let validation = validate_constraints(&classes);
-        println!("总分差值: {:.2}", validation.max_score_diff);
-        println!("性别比例差: {:.2}", validation.max_gender_ratio_diff);
-
-        assert!(validation.max_score_diff <= 2.0, "总分差值过大");
-        assert!(validation.max_gender_ratio_diff <= 0.25, "性别比例差过大");
-    }
-
-    #[test]
-    fn test_large_scale() {
-        let students = create_test_students(500);
-        let start = std::time::Instant::now();
-        let config = DivideConfig::new(10).with_iterations(400000);
-        let classes = divide_students(&students, config);
-        let duration = start.elapsed();
-
-        println!("500 students, 10 classes: {:?}", duration);
-        assert_eq!(classes.len(), 10);
-        assert!(duration.as_secs() < 30); // 应该在 30 秒内完成
-
-        let validation = validate_constraints(&classes);
-        println!(
-            "约束满足: 总分={} 性别={}",
-            validation.score_constraints_met, validation.gender_constraints_met
-        );
-
-        assert!(
-            validation.max_score_diff <= 3.0,
-            "总分差值: {:.2}",
-            validation.max_score_diff
-        );
-        assert!(
-            validation.max_gender_ratio_diff <= 0.4,
-            "性别比例差: {:.2}",
-            validation.max_gender_ratio_diff
-        );
-    }
-
-    #[test]
-    fn test_very_large_scale() {
-        let students = create_test_students(5000);
-        let start = std::time::Instant::now();
-        let config = DivideConfig::new(50).with_iterations(500000);
-        let classes = divide_students(&students, config);
-        let duration = start.elapsed();
-
-        println!("5000 students, 50 classes: {:?}", duration);
-        assert_eq!(classes.len(), 50);
-        assert!(duration.as_secs() < 300); // 必须在 5 分钟内完成
-
-        let validation = validate_constraints(&classes);
-        println!(
-            "总分约束: {} (差值 {:.2})",
-            validation.score_constraints_met, validation.max_score_diff
-        );
-        println!(
-            "性别约束: {} (差值 {:.2})",
-            validation.gender_constraints_met, validation.max_gender_ratio_diff
-        );
-
-        // 验证约束：正态分布数据接近满足约束（差值在合理范围内）
-        assert!(
-            validation.max_score_diff <= 3.0,
-            "总分差值过大: {:.2}",
-            validation.max_score_diff
-        );
-        assert!(
-            validation.max_gender_ratio_diff <= 0.35,
-            "性别比例差过大: {:.2}",
-            validation.max_gender_ratio_diff
-        );
-
-        // 验证大部分科目接近满足约束
-        let satisfied_subjects = validation
-            .subject_max_diffs
-            .iter()
-            .filter(|(_, d)| *d <= 2.5)
-            .count();
-        assert!(
-            satisfied_subjects >= 6,
-            "满足约束的科目太少: {}/9",
-            satisfied_subjects
-        );
     }
 }

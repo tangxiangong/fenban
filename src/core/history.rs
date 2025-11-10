@@ -1,7 +1,7 @@
 use crate::core::algorithm::OptimizationParams;
 use anyhow::Result;
+use fs_err as fs;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -55,7 +55,7 @@ impl HistoryManager {
         })
     }
 
-    pub fn load_history(&self) -> Result<Vec<HistoryRecord>> {
+    pub fn load(&self) -> Result<Vec<HistoryRecord>> {
         if !self.history_file.exists() {
             return Ok(Vec::new());
         }
@@ -76,14 +76,14 @@ impl HistoryManager {
         }
     }
 
-    fn save_records(&self, records: &[HistoryRecord]) -> Result<()> {
+    fn save(&self, records: &[HistoryRecord]) -> Result<()> {
         let content = serde_json::to_string_pretty(records)?;
         fs::write(&self.history_file, content)?;
         Ok(())
     }
 
-    pub fn add_record(&self, record: HistoryRecord) -> Result<()> {
-        let mut records = self.load_history().unwrap_or_default();
+    pub fn add(&self, record: HistoryRecord) -> Result<()> {
+        let mut records = self.load().unwrap_or_default();
         records.insert(0, record); // 最新的记录在前面
 
         // 只保留最近 50 条记录
@@ -91,21 +91,21 @@ impl HistoryManager {
             records.truncate(50);
         }
 
-        self.save_records(&records)?;
+        self.save(&records)?;
         Ok(())
     }
 
-    pub fn clear_history(&self) -> Result<()> {
+    pub fn clear(&self) -> Result<()> {
         if self.history_file.exists() {
             fs::remove_file(&self.history_file)?;
         }
         Ok(())
     }
 
-    pub fn delete_record(&self, timestamp: &str) -> Result<()> {
-        let mut records = self.load_history()?;
+    pub fn delete(&self, timestamp: &str) -> Result<()> {
+        let mut records = self.load()?;
         records.retain(|r| r.timestamp != timestamp);
-        self.save_records(&records)?;
+        self.save(&records)?;
         Ok(())
     }
 }

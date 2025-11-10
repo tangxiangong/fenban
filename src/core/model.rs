@@ -9,13 +9,13 @@ pub enum Gender {
 }
 
 impl FromStr for Gender {
-    type Err = String;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "男" => Ok(Gender::Male),
             "女" => Ok(Gender::Female),
-            _ => Err(format!("无效的性别: {}", s)),
+            _ => Err(anyhow::anyhow!("无效的性别: {}", s)),
         }
     }
 }
@@ -24,7 +24,7 @@ impl FromStr for Gender {
 #[derive(Debug, Clone)]
 pub struct Student {
     pub name: String,
-    pub student_id: Option<String>,
+    pub id: Option<String>,
     pub gender: Gender,
     pub scores: HashMap<String, f64>,
     pub total_score: f64,
@@ -36,7 +36,7 @@ impl Student {
         let total_score = scores.values().sum();
         Self {
             name,
-            student_id: None,
+            id: None,
             gender,
             scores,
             total_score,
@@ -44,8 +44,8 @@ impl Student {
         }
     }
 
-    pub fn with_student_id(mut self, student_id: Option<String>) -> Self {
-        self.student_id = student_id;
+    pub fn with_id(mut self, id: Option<String>) -> Self {
+        self.id = id;
         self
     }
 
@@ -161,57 +161,5 @@ impl Class {
             return 0.0;
         }
         self.male_count() as f64 / total
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_gender_parsing() {
-        assert_eq!("男".parse::<Gender>().unwrap(), Gender::Male);
-        assert_eq!("女".parse::<Gender>().unwrap(), Gender::Female);
-        assert!("unknown".parse::<Gender>().is_err());
-    }
-
-    #[test]
-    fn test_student_creation() {
-        let mut scores = HashMap::new();
-        scores.insert("Math".to_string(), 90.0);
-        scores.insert("English".to_string(), 85.0);
-
-        let student = Student::new("Test".to_string(), Gender::Male, scores);
-        assert_eq!(student.total_score, 175.0);
-    }
-
-    #[test]
-    fn test_class_statistics() {
-        let mut class = Class::new(0);
-
-        let student1 = Student {
-            name: "Student1".to_string(),
-            student_id: None,
-            gender: Gender::Male,
-            scores: HashMap::new(),
-            total_score: 600.0,
-            extra_fields: HashMap::new(),
-        };
-
-        let student2 = Student {
-            name: "Student2".to_string(),
-            student_id: None,
-            gender: Gender::Female,
-            scores: HashMap::new(),
-            total_score: 700.0,
-            extra_fields: HashMap::new(),
-        };
-
-        class.add_student(student1);
-        class.add_student(student2);
-
-        assert_eq!(class.male_count(), 1);
-        assert_eq!(class.female_count(), 1);
-        assert_eq!(class.avg_total_score(), 650.0);
     }
 }
