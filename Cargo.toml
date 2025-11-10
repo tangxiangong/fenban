@@ -60,9 +60,6 @@ windows-sys = { version = "0.61.2", features = [
 [target."cfg(target_os = \"windows\")".build-dependencies]
 winresource = "0.1"
 
-[dev-dependencies]
-rand_distr = "0.5"
-
 [profile.release]
 panic = "abort"
 codegen-units = 1
