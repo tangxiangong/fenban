@@ -1,6 +1,6 @@
 [package]
 name = "fenban"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["tangxiangong <tangxiangong@gmail.com>"]
 edition = "2024"
 description = "分班助手"
