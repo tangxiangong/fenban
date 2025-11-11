@@ -62,6 +62,9 @@ pub struct OptimizationParams {
     /// 总分差值超出阈值的惩罚权重（默认：1,000,000,000.0）
     pub total_score_penalty_weight: f64,
 
+    /// 班级人数差值超出阈值的惩罚权重（默认：1,000,000,000.0）
+    pub class_size_penalty_weight: f64,
+
     /// 科目分差值超出阈值的惩罚权重（默认：1,000,000,000.0）
     pub subject_score_penalty_weight: f64,
 
@@ -77,6 +80,9 @@ pub struct OptimizationParams {
 
     /// 性别方差的权重（默认：100.0）
     pub gender_variance_weight: f64,
+
+    /// 班级人数方差的权重（默认：5000.0）
+    pub class_size_variance_weight: f64,
 
     /// 科目方差的权重（默认：50.0）
     pub subject_variance_weight: f64,
@@ -117,15 +123,17 @@ impl Default for OptimizationParams {
             max_class_size_diff: 5,
             max_gender_ratio_diff: 0.1,
 
-            // 硬约束惩罚权重 - 性别比例权重极高以确保优先满足
+            // 硬约束惩罚权重 - 班级人数优先级最高
             total_score_penalty_weight: 1_000_000_000.0,
+            class_size_penalty_weight: 1_000_000_000_000.0, // 最高优先级：班级人数（1万亿）
             subject_score_penalty_weight: 1_000_000_000.0,
-            gender_ratio_penalty_weight: 100_000_000_000.0, // 极高的性别比例惩罚权重（100亿）
+            gender_ratio_penalty_weight: 100_000_000_000.0, // 次优先级：性别比例（100亿）
             penalty_power: 6,                               // 提高幂次以加强惩罚
 
             // 软约束权重 - 在满足硬约束后进一步优化
             total_variance_weight: 10.0,
-            gender_variance_weight: 5000.0, // 极高的性别方差权重
+            gender_variance_weight: 5000.0,      // 性别方差权重
+            class_size_variance_weight: 10000.0, // 最高优先级：班级人数方差权重
             subject_variance_weight: 50.0,
 
             // 模拟退火参数 - 平衡探索与收敛
@@ -151,6 +159,8 @@ impl OptimizationParams {
             max_subject_score_diff: 2.0,
             max_gender_ratio_diff: 0.15,
             penalty_power: 3,
+            class_size_penalty_weight: 500_000_000_000.0, // 宽松模式也保持最高优先级（5000亿）
+            class_size_variance_weight: 5000.0,           // 软约束也优先优化人数
             initial_temperature: 8_000.0,
             cooling_rate: 0.9995,
             ..Default::default()
@@ -165,8 +175,10 @@ impl OptimizationParams {
             max_gender_ratio_diff: 0.05,
             penalty_power: 5,
             total_score_penalty_weight: 5_000_000_000.0,
+            class_size_penalty_weight: 5_000_000_000_000.0, // 最高优先级：班级人数（5万亿）
             subject_score_penalty_weight: 5_000_000_000.0,
-            gender_ratio_penalty_weight: 5_000_000_000.0,
+            gender_ratio_penalty_weight: 500_000_000_000.0, // 次优先级：性别比例（5000亿）
+            class_size_variance_weight: 20000.0,            // 严格模式：更高的人数方差权重
             initial_temperature: 15_000.0,
             cooling_rate: 0.99995,
             ..Default::default()
@@ -194,8 +206,10 @@ impl OptimizationParams {
 pub struct ConstraintValidation {
     pub score_constraints_met: bool,
     pub gender_constraints_met: bool,
+    pub class_size_constraints_met: bool,
     pub max_score_diff: f64,
     pub max_gender_ratio_diff: f64,
+    pub max_class_size_diff: usize,
     pub subject_max_diffs: Vec<(String, f64)>,
 }
 
@@ -450,9 +464,32 @@ impl Solution {
 
         cost += subject_penalties;
 
+        // 班级人数差值硬约束惩罚
+        let class_sizes: Vec<usize> = self.class_stats.iter().map(|s| s.student_count).collect();
+        let max_class_size = class_sizes.iter().max().copied().unwrap_or(0);
+        let min_class_size = class_sizes.iter().min().copied().unwrap_or(0);
+        let class_size_diff = max_class_size.saturating_sub(min_class_size);
+
+        if class_size_diff > params.max_class_size_diff {
+            let excess = (class_size_diff - params.max_class_size_diff) as f64;
+            cost += excess.powi(params.penalty_power) * params.class_size_penalty_weight;
+        }
+
+        // 计算班级人数方差（软约束优化）
+        let class_size_mean = class_sizes.iter().sum::<usize>() as f64 / num_classes as f64;
+        let class_size_variance: f64 = class_sizes
+            .iter()
+            .map(|&size| {
+                let diff = size as f64 - class_size_mean;
+                diff * diff
+            })
+            .sum::<f64>()
+            / num_classes as f64;
+
         // 软约束优化（只在接近满足硬约束时起作用）
         cost += total_variance * params.total_variance_weight;
         cost += gender_variance * params.gender_variance_weight;
+        cost += class_size_variance * params.class_size_variance_weight;
         cost += subject_variance_sum * params.subject_variance_weight;
 
         cost
@@ -488,21 +525,25 @@ fn create_initial_solution(
             .unwrap()
     });
 
-    // 改进的 LPT：同时考虑总分和性别比例
+    // 改进的 LPT：优先考虑人数均衡，其次考虑总分和性别比例
     for &student_idx in &indices {
         let student = &students[student_idx];
 
-        // 找到最佳班级：综合考虑总分和性别比例
+        // 找到最佳班级：优先人数最少的班级，然后综合考虑总分和性别比例
         let best_class = solution
             .class_stats
             .iter()
             .enumerate()
             .min_by(|(_, a), (_, b)| {
-                // 计算分配到该班级后的总分
+                // 优先级1：人数最少的班级（权重极高）
+                let size_penalty_a = a.student_count as f64 * 1_000_000.0;
+                let size_penalty_b = b.student_count as f64 * 1_000_000.0;
+
+                // 优先级2：计算分配到该班级后的总分
                 let score_a = a.total_sum;
                 let score_b = b.total_sum;
 
-                // 计算性别比例偏差
+                // 优先级3：计算性别比例偏差
                 let male_ratio_a = if a.student_count == 0 {
                     0.0
                 } else {
@@ -529,9 +570,9 @@ fn create_initial_solution(
                 let gender_penalty_a = (male_ratio_a - 0.5).abs();
                 let gender_penalty_b = (male_ratio_b - 0.5).abs();
 
-                // 综合评分：总分 + 性别比例惩罚（权重较大）
-                let cost_a = score_a + gender_penalty_a * 10000.0;
-                let cost_b = score_b + gender_penalty_b * 10000.0;
+                // 综合评分：人数（最高优先级） + 总分 + 性别比例惩罚
+                let cost_a = size_penalty_a + score_a + gender_penalty_a * 10000.0;
+                let cost_b = size_penalty_b + score_b + gender_penalty_b * 10000.0;
 
                 cost_a.partial_cmp(&cost_b).unwrap()
             })
@@ -820,8 +861,10 @@ pub fn validate_constraints_with_params(
         return ConstraintValidation {
             score_constraints_met: true,
             gender_constraints_met: true,
+            class_size_constraints_met: true,
             max_score_diff: 0.0,
             max_gender_ratio_diff: 0.0,
+            max_class_size_diff: 0,
             subject_max_diffs: vec![],
         };
     }
@@ -854,6 +897,13 @@ pub fn validate_constraints_with_params(
     let max_gender_ratio_diff = max_gender_ratio - min_gender_ratio;
     let gender_constraints_met = max_gender_ratio_diff <= params.max_gender_ratio_diff + EPSILON;
 
+    // 计算班级人数约束
+    let class_sizes: Vec<usize> = classes.iter().map(|c| c.students.len()).collect();
+    let max_class_size = class_sizes.iter().max().copied().unwrap_or(0);
+    let min_class_size = class_sizes.iter().min().copied().unwrap_or(0);
+    let max_class_size_diff = max_class_size.saturating_sub(min_class_size);
+    let class_size_constraints_met = max_class_size_diff <= params.max_class_size_diff;
+
     // 计算各科约束
     let mut subject_max_diffs = Vec::new();
     for subject in &subjects {
@@ -870,8 +920,10 @@ pub fn validate_constraints_with_params(
     ConstraintValidation {
         score_constraints_met,
         gender_constraints_met,
+        class_size_constraints_met,
         max_score_diff,
         max_gender_ratio_diff,
+        max_class_size_diff,
         subject_max_diffs,
     }
 }

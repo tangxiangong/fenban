@@ -205,11 +205,12 @@ pub fn Home() -> Element {
                                         );
 
                                         let summary = format!(
-                                            "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%",
+                                            "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%\n班级人数最大差: {}人",
                                             student_count,
                                             classes,
                                             validation.max_score_diff,
                                             validation.max_gender_ratio_diff * 100.0,
+                                            validation.max_class_size_diff,
                                         );
 
                                         result_summary.set(Some(summary));
