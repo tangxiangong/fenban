@@ -10,37 +10,37 @@ pub fn ProcessingView(
     let mut show_params = use_signal(|| false);
 
     rsx! {
-            div { class: "text-center py-16 px-4",
-                // 主要加载动画
-                div { class: "flex justify-center mb-6",
-                    div { class: "loading loading-spinner loading-lg text-primary" }
-                }
+        div { class: "text-center py-16 px-4",
+            // 主要加载动画
+            div { class: "flex justify-center mb-6",
+                div { class: "loading loading-spinner loading-lg text-primary" }
+            }
 
-                // 标题和提示
-                h2 { class: "text-3xl font-bold mb-3", "正在分班中..." }
-                p { class: "text-base-content/70 mb-6", "算法正在优化班级分配，请稍候" }
+            // 标题和提示
+            h2 { class: "text-3xl font-bold mb-3", "正在分班中..." }
+            p { class: "text-base-content/70 mb-6", "算法正在优化班级分配，请稍候" }
 
-                // 配置参数展示（可折叠）
-                div { class: "mt-12 max-w-2xl mx-auto",
-                    div { class: "collapse collapse-arrow bg-base-200 shadow-xl",
-                        input {
-                            r#type: "checkbox",
-                            checked: *show_params.read(),
-                            onchange: move |evt| {
-                                show_params.set(evt.checked());
-                            },
-                        }
-                        div { class: "collapse-title text-lg font-bold",
-                            "当前配置参数"
-                        }
-                        div { class: "collapse-content",
-                            div { class: "pt-4",
+            // 配置参数展示（可折叠）
+            div { class: "mt-12 max-w-2xl mx-auto",
+                div { class: "collapse collapse-arrow bg-base-200 shadow-xl",
+                    input {
+                        r#type: "checkbox",
+                        checked: *show_params.read(),
+                        onchange: move |evt| {
+                            show_params.set(evt.checked());
+                        },
+                    }
+                    div { class: "collapse-title text-lg font-bold", "当前配置参数" }
+                    div { class: "collapse-content",
+                        div { class: "pt-4",
 
                             // 基础参数
                             div { class: "grid grid-cols-1 md:grid-cols-2 gap-4 mb-4",
                                 div { class: "stat bg-base-100 rounded-lg p-4",
                                     div { class: "stat-title text-xs", "班级数量" }
-                                    div { class: "stat-value text-2xl text-primary", "{num_classes}" }
+                                    div { class: "stat-value text-2xl text-primary",
+                                        "{num_classes}"
+                                    }
                                     div { class: "stat-desc", "个班级" }
                                 }
                                 div { class: "stat bg-base-100 rounded-lg p-4",
@@ -138,7 +138,9 @@ pub fn ProcessingView(
                                 }
                                 div { class: "flex justify-between items-center bg-base-100 rounded px-3 py-2",
                                     span { class: "text-base-content/70", "惩罚幂次" }
-                                    span { class: "font-mono", "{optimization_params.read().penalty_power}" }
+                                    span { class: "font-mono",
+                                        "{optimization_params.read().penalty_power}"
+                                    }
                                 }
                                 div { class: "flex justify-between items-center bg-base-100 rounded px-3 py-2",
                                     span { class: "text-base-content/70", "良好解阈值" }

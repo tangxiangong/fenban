@@ -7,7 +7,7 @@ use crate::core::{
     model::Class,
 };
 use crate::ui::components::*;
-use crate::ui::{ICON_ERROR, ICON_HISTORY, ICON_SUCCESS, LOGO};
+use crate::ui::{ERROR, HISTORY, LOGO, SUCCESS};
 use dioxus::prelude::*;
 use rfd::AsyncFileDialog;
 use tokio_util::sync::CancellationToken;
@@ -378,7 +378,7 @@ pub fn Home() -> Element {
                     div { class: "alert alert-error mb-4 animate-fade-in shadow-lg",
                         img {
                             class: "stroke-current shrink-0 h-6 w-6",
-                            src: ICON_ERROR,
+                            src: ERROR,
                         }
                         span { "{err}" }
                         button {
@@ -394,7 +394,7 @@ pub fn Home() -> Element {
                     div { class: "alert alert-success mb-4 animate-fade-in shadow-lg",
                         img {
                             class: "stroke-current shrink-0 h-6 w-6",
-                            src: ICON_SUCCESS,
+                            src: SUCCESS,
                         }
                         span { "{msg}" }
                         button {
@@ -436,11 +436,7 @@ pub fn Home() -> Element {
                                 }
                             },
                             AppStep::Processing => rsx! {
-                                ProcessingView {
-                                    num_classes,
-                                    optimization_params,
-                                    on_cancel: cancel_division,
-                                }
+                                ProcessingView { num_classes, optimization_params, on_cancel: cancel_division }
                             },
                             AppStep::Results => rsx! {
                                 ResultsView {
@@ -473,7 +469,7 @@ pub fn Home() -> Element {
                 div { class: "collapse collapse-arrow bg-base-200 mt-6",
                     input { r#type: "checkbox" }
                     div { class: "collapse-title text-sm font-medium flex items-center gap-2",
-                        img { class: "w-4 h-4", src: ICON_HISTORY }
+                        img { class: "w-4 h-4", src: HISTORY }
                         "历史记录"
                     }
                     div { class: "collapse-content",

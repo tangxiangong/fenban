@@ -1,7 +1,7 @@
 use crate::{
     core::model::{Class, Student},
     ui::{
-        ICON_WARNING,
+        WARNING,
         components::types::{ColumnMapping, ColumnType},
     },
 };
@@ -60,10 +60,7 @@ pub fn ResultsView(
         return rsx! {
             div { class: "text-center py-12",
                 div { class: "mb-6",
-                    img {
-                        class: "w-16 h-16 mx-auto text-warning",
-                        src: ICON_WARNING,
-                    }
+                    img { class: "w-16 h-16 mx-auto text-warning", src: WARNING }
                 }
                 h2 { class: "text-2xl font-bold mb-4", "没有分班数据" }
                 p { class: "text-base-content/70 mb-6", "分班结果为空，请重新尝试" }

@@ -6,14 +6,15 @@ pub mod views;
 
 // icon assets
 pub static LOGO: Asset = asset!("assets/logo.png");
-pub static ICON_DOCUMENT: Asset = asset!("assets/icons/document.svg");
-pub static ICON_INFO: Asset = asset!("assets/icons/info.svg");
-pub static ICON_ERROR: Asset = asset!("assets/icons/error.svg");
-pub static ICON_SUCCESS: Asset = asset!("assets/icons/success.svg");
-pub static ICON_WARNING: Asset = asset!("assets/icons/warning.svg");
-pub static ICON_TRASH: Asset = asset!("assets/icons/trash.svg");
-pub static ICON_SETTINGS: Asset = asset!("assets/icons/settings.svg");
-pub static ICON_HISTORY: Asset = asset!("assets/icons/history.svg");
+pub static EXCEL: Asset = asset!("assets/icons/excel.svg");
+pub static CSV: Asset = asset!("assets/icons/csv.svg");
+pub static INFO: Asset = asset!("assets/icons/info.svg");
+pub static ERROR: Asset = asset!("assets/icons/error.svg");
+pub static SUCCESS: Asset = asset!("assets/icons/success.svg");
+pub static WARNING: Asset = asset!("assets/icons/warning.svg");
+pub static TRASH: Asset = asset!("assets/icons/trash.svg");
+pub static SETTINGS: Asset = asset!("assets/icons/settings.svg");
+pub static HISTORY: Asset = asset!("assets/icons/history.svg");
 
 // tailwindcss
 pub static TAILWINDCSS: Asset = asset!("assets/tailwind.css");

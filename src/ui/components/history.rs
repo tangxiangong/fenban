@@ -1,5 +1,5 @@
 use crate::core::history::{HistoryManager, HistoryRecord};
-use crate::ui::{ICON_SETTINGS, ICON_TRASH};
+use crate::ui::{SETTINGS, TRASH};
 use dioxus::prelude::*;
 
 // 折叠版本的历史记录组件
@@ -53,7 +53,7 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
                     button {
                         class: "btn btn-xs btn-ghost gap-1",
                         onclick: clear_history,
-                        img { class: "w-3 h-3", src: ICON_TRASH }
+                        img { class: "w-3 h-3", src: TRASH }
                         "清空全部"
                     }
                 }
@@ -140,7 +140,7 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
                                                 },
                                                 img {
                                                     class: "w-3 h-3",
-                                                    src: ICON_SETTINGS,
+                                                    src: SETTINGS,
                                                 }
                                             }
                                             button {
@@ -166,7 +166,7 @@ pub fn HistoryCollapsedView(refresh_trigger: u32) -> Element {
                                                 },
                                                 img {
                                                     class: "w-3 h-3",
-                                                    src: ICON_TRASH,
+                                                    src: TRASH,
                                                 }
                                             }
                                         }

@@ -1,4 +1,4 @@
-use crate::{core::algorithm::OptimizationParams, ui::ICON_INFO};
+use crate::{core::algorithm::OptimizationParams, ui::INFO};
 use dioxus::prelude::*;
 
 #[component]
@@ -72,10 +72,7 @@ pub fn DivisionConfigView(
 
                 // 约束说明
                 div { class: "alert alert-info",
-                    img {
-                        class: "stroke-current shrink-0 h-6 w-6",
-                        src: ICON_INFO,
-                    }
+                    img { class: "stroke-current shrink-0 h-6 w-6", src: INFO }
                     div {
                         h3 { class: "font-bold", "当前方案约束" }
                         ul { class: "list-disc list-inside text-sm mt-2",

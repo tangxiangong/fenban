@@ -1,6 +1,7 @@
 {
   "version": "5",
   "specifiers": {
+    "npm:@tailwindcss/cli@*": "4.1.17",
     "npm:@tailwindcss/cli@4.1.17": "4.1.17",
     "npm:daisyui@^5.4.7": "5.4.7",
     "npm:tailwindcss@^4.1.17": "4.1.17"
