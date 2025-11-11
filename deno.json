@@ -2,7 +2,7 @@
     "imports": {
         "daisyui": "npm:daisyui@^5.4.7",
         "tailwindcss": "npm:tailwindcss@^4.1.17",
-        "@tailwindcss/cli": "npm:@tailwindcss/cli@4.1.16"
+        "@tailwindcss/cli": "npm:@tailwindcss/cli@4.1.17"
     },
     "nodeModulesDir": "auto",
     "tasks": {

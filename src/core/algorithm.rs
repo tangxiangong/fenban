@@ -1,10 +1,7 @@
 use super::model::{Class, Gender, Student};
 use rand::{Rng, rng};
 use rayon::prelude::*;
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
+use tokio_util::sync::CancellationToken;
 
 /// 分班配置
 #[derive(Debug, Clone)]
@@ -561,7 +558,8 @@ fn simulated_annealing(
     max_iterations: usize,
     mut initial_temp: f64,
     cooling_rate: f64,
-    found_solution: Arc<AtomicBool>,
+    found_solution: CancellationToken,
+    cancel_token: CancellationToken,
     params: &OptimizationParams,
 ) -> Solution {
     let mut current = initial.clone();
@@ -593,8 +591,8 @@ fn simulated_annealing(
     }
 
     for iteration in 0..max_iterations {
-        // 每1000次检查是否其他线程已找到解
-        if iteration % 1000 == 0 && found_solution.load(Ordering::Relaxed) {
+        // 每1000次检查是否其他线程已找到解或被取消
+        if iteration % 1000 == 0 && (found_solution.is_cancelled() || cancel_token.is_cancelled()) {
             break;
         }
 
@@ -655,7 +653,7 @@ fn simulated_annealing(
 
                 // 如果找到非常好的解（可能满足所有约束），标记
                 if best_cost < params.good_solution_threshold {
-                    found_solution.store(true, Ordering::Relaxed);
+                    found_solution.cancel();
                 }
             } else {
                 iterations_since_improvement += 1;
@@ -688,9 +686,10 @@ fn parallel_search(
     subject_order: &[String],
     total_iterations: usize,
     num_instances: usize,
+    cancel_token: CancellationToken,
     params: &OptimizationParams,
 ) -> Solution {
-    let found_solution = Arc::new(AtomicBool::new(false));
+    let found_solution = CancellationToken::new();
     // 每个实例使用全部迭代次数，不除以实例数
     let iterations_per_instance = total_iterations;
 
@@ -710,7 +709,8 @@ fn parallel_search(
                 iterations_per_instance,
                 temp,
                 cooling,
-                Arc::clone(&found_solution),
+                found_solution.clone(),
+                cancel_token.clone(),
                 params,
             )
         })
@@ -729,6 +729,15 @@ fn parallel_search(
 
 /// 分班主函数
 pub fn divide(students: &[Student], config: DivideConfig) -> Vec<Class> {
+    divide_with_cancel(students, config, CancellationToken::new())
+}
+
+/// 分班主函数（支持取消）
+pub fn divide_with_cancel(
+    students: &[Student],
+    config: DivideConfig,
+    cancel_token: CancellationToken,
+) -> Vec<Class> {
     let num_classes = config.num_classes;
     let max_iterations = config.max_iterations;
     let params = &config.optimization_params;
@@ -790,6 +799,7 @@ pub fn divide(students: &[Student], config: DivideConfig) -> Vec<Class> {
         &subject_order,
         adjusted_iterations,
         num_instances,
+        cancel_token,
         params,
     );
 

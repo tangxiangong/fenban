@@ -1,5 +1,7 @@
 use crate::core::{
-    algorithm::{DivideConfig, OptimizationParams, divide, validate_constraints_with_params},
+    algorithm::{
+        DivideConfig, OptimizationParams, divide_with_cancel, validate_constraints_with_params,
+    },
     history::{HistoryManager, HistoryRecord},
     io::{ColumnConfig, export_to_csv, export_to_excel, read_from_csv, read_from_excel},
     model::Class,
@@ -8,6 +10,7 @@ use crate::ui::components::*;
 use crate::ui::{ICON_ERROR, ICON_HISTORY, ICON_SUCCESS, LOGO};
 use dioxus::prelude::*;
 use rfd::AsyncFileDialog;
+use tokio_util::sync::CancellationToken;
 
 #[component]
 pub fn Home() -> Element {
@@ -25,6 +28,7 @@ pub fn Home() -> Element {
     let mut optimization_params = use_signal(OptimizationParams::default);
     let mut last_export_path = use_signal(|| None::<String>);
     let history_refresh = use_signal(|| 0u32); // 用于触发历史记录刷新
+    let mut cancel_token = use_signal(|| None::<CancellationToken>); // 取消标志
 
     // 文件选择处理
     let select_file = move |_| {
@@ -117,6 +121,10 @@ pub fn Home() -> Element {
         let classes = *num_classes.read();
         let opt_params = optimization_params.read().clone();
 
+        // 创建取消标志
+        let cancel = CancellationToken::new();
+        cancel_token.set(Some(cancel.clone()));
+
         // 立即切换到 Processing 状态
         processing.set(true);
         step.set(AppStep::Processing);
@@ -171,26 +179,50 @@ pub fn Home() -> Element {
 
                     match students_result {
                         Ok(students) => {
+                            let student_count = students.len();
                             let divide_config = DivideConfig::new(classes)
                                 .with_optimization_params(opt_params.clone());
-                            let classes_result = divide(&students, divide_config.clone());
-                            let validation = validate_constraints_with_params(
-                                &classes_result,
-                                &divide_config.optimization_params,
-                            );
 
-                            let summary = format!(
-                                "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%",
-                                students.len(),
-                                classes,
-                                validation.max_score_diff,
-                                validation.max_gender_ratio_diff * 100.0,
-                            );
+                            // 在单独的线程中运行分班算法，避免阻塞 UI
+                            let cancel_clone = cancel.clone();
+                            let divide_result = tokio::task::spawn_blocking(move || {
+                                divide_with_cancel(&students, divide_config, cancel_clone)
+                            })
+                            .await;
 
-                            result_summary.set(Some(summary));
-                            result_classes.set(classes_result);
-                            success_message.set(Some("分班成功！".to_string()));
-                            step.set(AppStep::Results);
+                            match divide_result {
+                                Ok(classes_result) => {
+                                    // 检查是否被取消
+                                    if cancel.is_cancelled() {
+                                        error_message.set(Some("分班已取消".to_string()));
+                                        step.set(AppStep::ConfigureDivision);
+                                    } else {
+                                        let divide_config = DivideConfig::new(classes)
+                                            .with_optimization_params(opt_params.clone());
+                                        let validation = validate_constraints_with_params(
+                                            &classes_result,
+                                            &divide_config.optimization_params,
+                                        );
+
+                                        let summary = format!(
+                                            "学生总数: {}\n班级数量: {}\n总分最大差值: {:.2}分\n性别比例最大差: {:.1}%",
+                                            student_count,
+                                            classes,
+                                            validation.max_score_diff,
+                                            validation.max_gender_ratio_diff * 100.0,
+                                        );
+
+                                        result_summary.set(Some(summary));
+                                        result_classes.set(classes_result);
+                                        success_message.set(Some("分班成功！".to_string()));
+                                        step.set(AppStep::Results);
+                                    }
+                                }
+                                Err(e) => {
+                                    error_message.set(Some(format!("分班任务失败: {}", e)));
+                                    step.set(AppStep::ConfigureDivision);
+                                }
+                            }
                         }
                         Err(e) => {
                             error_message.set(Some(format!("读取学生数据失败: {}", e)));
@@ -205,7 +237,15 @@ pub fn Home() -> Element {
             }
 
             processing.set(false);
+            cancel_token.set(None);
         });
+    };
+
+    // 取消分班
+    let cancel_division = move |_| {
+        if let Some(token) = cancel_token.read().as_ref() {
+            token.cancel();
+        }
     };
 
     // 导出结果
@@ -396,7 +436,11 @@ pub fn Home() -> Element {
                                 }
                             },
                             AppStep::Processing => rsx! {
-                                ProcessingView { num_classes, optimization_params }
+                                ProcessingView {
+                                    num_classes,
+                                    optimization_params,
+                                    on_cancel: cancel_division,
+                                }
                             },
                             AppStep::Results => rsx! {
                                 ResultsView {
@@ -404,6 +448,9 @@ pub fn Home() -> Element {
                                     summary: result_summary.read().clone(),
                                     column_mappings,
                                     on_export: export_results,
+                                    on_back: move |_| {
+                                        step.set(AppStep::ConfigureDivision);
+                                    },
                                     on_restart: move |_| {
                                         step.set(AppStep::SelectFile);
                                         file_path.set(None);

@@ -14,6 +14,7 @@ pub fn ResultsView(
     column_mappings: Signal<Vec<ColumnMapping>>,
     on_export: EventHandler<String>,
     on_restart: EventHandler<()>,
+    on_back: EventHandler<()>,
 ) -> Element {
     let mut current_page = use_signal(|| 0);
     let page_size = 8;
@@ -268,6 +269,11 @@ pub fn ResultsView(
 
             // 操作按钮
             div { class: "flex justify-center gap-4",
+                button {
+                    class: "btn btn-outline",
+                    onclick: move |_| on_back.call(()),
+                    "← 上一步"
+                }
                 button {
                     class: "btn btn-primary",
                     onclick: move |_| on_export.call("xlsx".to_string()),
