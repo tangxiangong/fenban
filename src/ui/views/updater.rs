@@ -1,8 +1,6 @@
-use crate::{
-    ui::components::updater::*,
-    updater::{Updater, UpdaterBuilder},
-};
+use crate::ui::components::updater::*;
 use dioxus::prelude::*;
+use release_hub::{Updater, UpdaterBuilder};
 use semver::Version;
 
 #[derive(Debug, Clone)]

@@ -1645,32 +1645,22 @@ dependencies = [
  "csv",
  "dioxus",
  "dirs",
- "flate2",
  "fs-err",
- "futures-util",
- "http",
  "image",
  "num_cpus",
- "octocrab",
  "once_cell",
  "opener",
- "osakit",
  "rand 0.9.2",
  "rayon",
- "reqwest",
+ "release-hub",
  "rfd",
  "rust_xlsxwriter",
  "semver",
  "serde",
  "serde_json",
- "tempfile",
- "thiserror 2.0.17",
  "tokio",
  "tokio-util",
- "url",
- "windows-sys 0.61.2",
  "winresource",
- "zip 6.0.0",
 ]
 
 [[package]]
@@ -4299,6 +4289,26 @@ name = "regex-syntax"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
+
+[[package]]
+name = "release-hub"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc1c289f4094b7f78fe57c7db133171254514b828aed15c1f08b07d537497364"
+dependencies = [
+ "flate2",
+ "futures-util",
+ "http",
+ "octocrab",
+ "osakit",
+ "reqwest",
+ "semver",
+ "tempfile",
+ "thiserror 2.0.17",
+ "url",
+ "windows-sys 0.61.2",
+ "zip 6.0.0",
+]
 
 [[package]]
 name = "reqwest"
