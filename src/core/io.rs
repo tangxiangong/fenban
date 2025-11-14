@@ -1,10 +1,10 @@
 use super::model::{Class, Gender, Student};
-use calamine::{Data, DataType, Reader, Xls, Xlsx, open_workbook};
+use calamine::{Data, DataType, Reader, open_workbook_auto};
 use csv::{Reader as CsvReader, Writer as CsvWriter};
 use fs_err as fs;
 use rayon::prelude::*;
 use rust_xlsxwriter::{Format, Workbook};
-use std::{collections::HashMap, io::BufReader};
+use std::collections::HashMap;
 
 /// Excel 列配置
 #[derive(Debug, Clone)]
@@ -25,14 +25,14 @@ pub struct ColumnConfig {
 
 impl ColumnConfig {
     /// 手动构建配置
-    pub fn builder() -> ExcelColumnConfigBuilder {
-        ExcelColumnConfigBuilder::default()
+    pub fn builder() -> ColumnConfigBuilder {
+        ColumnConfigBuilder::default()
     }
 }
 
 /// Excel 列配置构建器
 #[derive(Debug, Default)]
-pub struct ExcelColumnConfigBuilder {
+pub struct ColumnConfigBuilder {
     name: Option<usize>,
     id: Option<usize>,
     gender: Option<usize>,
@@ -41,7 +41,7 @@ pub struct ExcelColumnConfigBuilder {
     extra: HashMap<String, usize>,
 }
 
-impl ExcelColumnConfigBuilder {
+impl ColumnConfigBuilder {
     pub fn name(mut self, col: usize) -> Self {
         self.name = Some(col);
         self
@@ -84,46 +84,9 @@ impl ExcelColumnConfigBuilder {
     }
 }
 
-/// Excel 工作簿枚举，支持 .xls 和 .xlsx 格式
-enum ExcelWorkbook {
-    Xls(Xls<BufReader<std::fs::File>>),
-    Xlsx(Xlsx<BufReader<std::fs::File>>),
-}
-
-impl ExcelWorkbook {
-    /// 打开 Excel 文件（自动识别 .xls 和 .xlsx 格式）
-    fn open(file_path: &str) -> anyhow::Result<Self> {
-        if file_path.ends_with(".xls") {
-            let workbook: Xls<_> = open_workbook(file_path)?;
-            Ok(ExcelWorkbook::Xls(workbook))
-        } else if file_path.ends_with(".xlsx") {
-            let workbook: Xlsx<_> = open_workbook(file_path)?;
-            Ok(ExcelWorkbook::Xlsx(workbook))
-        } else {
-            anyhow::bail!("不支持的文件格式，仅支持 .xls 和 .xlsx 文件");
-        }
-    }
-
-    /// 获取工作表名称列表
-    fn sheet_names(&self) -> Vec<String> {
-        match self {
-            ExcelWorkbook::Xls(wb) => wb.sheet_names().to_vec(),
-            ExcelWorkbook::Xlsx(wb) => wb.sheet_names().to_vec(),
-        }
-    }
-
-    /// 获取工作表范围
-    fn worksheet_range(&mut self, name: &str) -> anyhow::Result<calamine::Range<Data>> {
-        match self {
-            ExcelWorkbook::Xls(wb) => Ok(wb.worksheet_range(name)?),
-            ExcelWorkbook::Xlsx(wb) => Ok(wb.worksheet_range(name)?),
-        }
-    }
-}
-
 /// 从 Excel 读取学生数据（使用列配置）
 pub fn read_from_excel(file_path: &str, config: &ColumnConfig) -> anyhow::Result<Vec<Student>> {
-    let mut workbook = ExcelWorkbook::open(file_path)?;
+    let mut workbook = open_workbook_auto(file_path)?;
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)?;
 
